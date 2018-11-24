@@ -1,0 +1,72 @@
+\documentclass{beamer}
+
+\mode<presentation>
+{
+  \usetheme{Berkeley}
+  \usecolortheme{crane}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{polski}
+
+% For pygmentize
+\usepackage{fancyvrb}
+\usepackage{color}
+
+%% \input{styles}
+\title{Podstawy SQL i PostgreSQL}
+
+\author[]{Szymon Pyżalski}
+
+\date {}
+\logo {\includegraphics[width=1.5cm]{../vavatech_logo_small.png}}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage 
+\end{frame}
+
+\section{Relacyjne bazy danych}
+\insertsectionhead
+\begin{frame}{Podstawowe pojęcia}
+    \begin{description}
+        \pause
+    \item[baza danych]
+        Zorganizowany zbiór danych przechowywany elektronicznie
+            \pause
+    \item[DBMS]
+       System oprogramowania zarządzający bazą danych, umożliwiający dostęp do
+            nich.
+            \pause
+    \item[relacyjna baza danych]
+        Baza danych oparta o model relacyjny
+        \pause
+    \item[SQL]
+        Język używany do interakcji z relacyjnymi bazami danych
+    \end{description}
+\end{frame}
+
+\begin{frame}{Tabela w relacyjnej bazie danych}
+    \begin{tabular}{| r | l | l | r | r |}
+        \hline
+        \textbf{id} & \textbf{first\_name} & \textbf{last\_name} & \textbf{age}
+        & \textbf{responds\_to} \\
+        \hline
+        1 & Shaddam & Corrino & 57 & NULL\\
+        \hline
+        2 & Leto & Atreides & 51 & 1\\
+        \hline
+        3 & Paul & Atreides & 15 & 2\\
+        \hline
+        4 & Vladimir & Harkonnen & 81 & 1\\
+        \hline
+        5 & Gurney & Halleck & 56 & 2\\
+        \hline
+        6 & Piter & de Vries & 53 & 4\\
+        \hline
+    \end{tabular}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,319 @@
+\documentclass[openany,twoside]{book}
+\usepackage{layout}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{minted}
+\usepackage{ccicons}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{upquote}
+\begin{document}
+\title{Administracja bazami danych PostgreSQL}
+\author{Szymon Pyżalski}
+
+\maketitle
+
+ \vspace*{\fill}
+ Niniejszy skrypt dostępny jest na licencji\\
+ Creative Commons  Uznanie autorstwa -- Na tych samych warunkach 4.0\\
+ Pewne prawa zastrzeżone.\\
+ \url{https://creativecommons.org/licenses/by-sa/4.0/legalcode.pl}\\
+ \ccbysa
+
+
+\chapter{Instalacja bazy danych}
+
+\section{Instalacja z paczek}
+
+Praktycznie wszystkie dystrybucje Linuxa posiadają paczki, które umożliwiają
+instalację RDBS PostgreSQL. Dystrybucja podzielona jest zwykle na następujące
+paczki (nazwy według Ubuntu):
+
+\begin{enumerate}
+    \item Paczka serwerowa zawierająca usługę PostgreSQL
+        (\texttt{postgresql-10})
+    \item Paczka kliencka zawierająca narzędzie \texttt{psql}
+        (texttt{postgresql-client-10})
+    \item Paczki developerskie potrzebne przy instalacji ze źródeł narzędzi
+        backendowych (\texttt{postgresql-server-dev-10}) oraz frontendowych
+        (\texttt{libpq-dev})
+    \item Wsparcie dla języków programowania
+        (np.  \texttt{postgresql-plpython-10})
+    \item Rozszerzenia (np. \texttt{postgis})
+\end{enumerate}
+
+Paczki te oprócz instalacji RDBS przeprowadzają też jego podstawową
+konfigurację. Konfigurują również menedżera usług, co sprawia, że po instalacji
+odpowiedniej paczki otrzymujemy działającą usługę PostgreSQL.
+
+\section{Instalacja ze źródeł}
+
+PostgreSQL nie posiada wielu zależności i w zasadzie może być skompilowany bez
+żadnych bibliotek poza biblioteką standardową C. Nie jest to jednak zalecane.
+Do zależności, które są nam potrzebne należą:
+
+\begin{description}
+    \item[readline]Umożliwia narzędziu \texttt{psql} stworzenie przyjaznego
+        interfejsu tekstowego (historia, podpowiadanie składni). Bardzo
+        zalecany.
+    \item[zlib]Umożliwia kompresję danych przy zrzutach i odzyskiwaniu baz
+        danych. Bardzo zalecany.
+    \item[OpenSSL]Umożliwia szyfrowaną łączność z usługą.
+    \item[kerberos, openLDAP etc]Jeśli chcemy skonfigurować uwierzytelnianie
+        przy pomocy tych usług.
+    \item[Python, Tcl etc.]Aby umożliwić pisanie funkcji w tych językach.
+\end{description}
+
+Instalacja ze źródeł umożliwia nam precyzyjne określenie, jakie funkcjonalności
+mają być dostępne w usłudze. Umożliwia też określenie domyślnej konfiguracji
+(która jest jednak łatwa do nadpisania w plikach konfiguracyjnych).
+
+Instalację ze źródeł przeprowadzamy standardowymi poleceniami
+\texttt{./configure}, \texttt{make}, \texttt{make install}.
+
+Po instalacji konieczne jest ręczne utworzenie klastra oraz konfiguracja
+usługi.
+
+\chapter{Wstępna konfiguracja PostgreSQL}
+
+\section{Utworzenie klastra}
+
+Aby utworzyć klaster na dysku używamy polecenia \texttt{initdb}. Np. 
+
+\begin{minted}{shell-session}
+    # export PGDATA=/var/lib/postgresql/10.0/data
+    # adduser --disabled-password postgres
+    # mkdir -p $PGDATA
+    # chmod postgres:postgres $PGDATA
+    $ export PGDATA=/var/lib/postgresql/10.0/data
+    $ initdb -D PGDATA
+\end{minted}
+
+Zaleca się, aby stworzony użytkownik (zalecana nazwa \texttt{postgres}) był
+wykorzystywany tylko do tego celu.
+
+\section{Uruchomienie serwera}
+
+Po utworzeniu klastra możemy już uruchomić serwer. Najbardziej niskopoziomowym
+sposobem uruchomienia jest wywołanie polecenia \texttt{postgres}
+
+\begin{minted}{shell-session}
+    $ sudo su postgres
+    $ postgres -D /var/lib/postgresql/10.0/data
+\end{minted}
+
+Polecenie to powoduje uruchomienie serwera w wersji niezdemonizowanej, w
+\emph{foreground}. Prostym narzędziem do uruchamiania serwera w wersji
+zdemonizowanej jest \texttt{pg\_ctl}
+
+\begin{minted}{shell-session}
+    $ export PGDATA=/var/lib/postgresql/10.0/datapostgres -D /var/lib/postgresql/10.0/data
+    $ sudo -Eu postgres pg_ctl start
+\end{minted}
+
+Po wszystkim możemy spróbować połączyć się z serwerem:
+
+\begin{minted}{shell-session}
+    $ sudo -u postgres psql
+\end{minted}
+
+Właściwym dla serwerów produkcyjnych sposobem uruchamiania serwera jest
+zastosowanie menadżera usług. Przykładowa konfiguracja usługi PostgreSQL dla
+systemd:
+
+\begin{minted}{ini}
+    [Unit]
+    Description=PostgreSQL database server
+
+    [Service]
+    Type=notify
+    User=postgres
+    ExecStart=/usr/local/pgsql/bin/postgres -D /usr/local/pgsql/data
+    ExecReload=/bin/kill -HUP $MAINPID
+    KillMode=mixed
+    KillSignal=SIGINT
+    TimeoutSec=0
+
+    [Install]
+    WantedBy=multi-user.target
+\end{minted}
+
+\section{Konfiguracja dostępności}
+
+Domyślnie serwer postgresql nasłuchuje połączeń wyłącznie na
+\texttt{localhost}. Aby umożliwić połączenia z zewnątrz należy zmienić dwie
+rzeczy. Po pierwsze – w pliku \texttt{postgresql.conf} należy ustawić wartość
+\texttt{listen\_addresses}. Wartość ta określa adresy, na których serwer
+\emph{nasłuchuje}. Dlatego jeśli chcemy, aby do serwera istniał dostęp z
+określonej sieci należy dodać do listy adres I.P. naszej maszyny w tej sieci.
+Alternatywnie możemy ustawić wartość tego parametru na \texttt{'*'}. Serwer
+będzie wtedy nasłuchiwał na wszystkich adresach.
+
+Drugą sprawą jest edycja pliku \texttt{pg\_hba.conf}. Plik ten jest tabelą
+określającą sposoby, w jakie można łączyć się z serwerem. Posiada on pięć
+kolumn:
+
+\subsection{TYPE}
+\begin{description}
+    \item[local] Połączenie przez socket unixowy
+    \item[host] Połączenie sieciowe (szyfrowane bądź nie)
+    \item[hostssl] Połączenie sieciowe (szyfrowane)
+    \item[hostnossl] Połączenie sieciowe (nieszyfrowane)
+\end{description}
+
+\subsection{DATABASE}
+Kolumna ta zawierać może nazwę bazy danych. Oprócz tego przyjmuje następujące
+specjalne nazwy:
+\begin{description}
+    \item[all] Wszystkie bazy danych
+    \item[sameuser] Baza danych o tej samej nazwie co użytkownik
+    \item[samerole] Baza danych o tej samej nazwie, co jedna z ról użytkownika
+    \item[@nazwapliku] Bazy danych wymienione w pliku \texttt{nazwapliku}
+\end{description}
+
+\subsection{USER}
+Może zawierać:
+\begin{itemize}
+    \item Nazwę użytkownika
+    \item Nazwę roli, do której należy użytkownik poprzedzoną znakiem \texttt{+},
+    \item Nazwę pliku z listą użytkowników poprzedzoną znakiem \texttt{@}
+    \item Słowo \texttt{all}
+\end{itemize}
+
+\subsection{ADDRESS}
+
+Zawiera nazwę domeny albo adres IP podsieci. Może również zawierać specjalne
+nazwy \texttt{samehost} i \texttt{samenet} określające połączenia z tego samego
+hosta lub tej samej podsieci.
+
+\subsection{METHOD}
+
+Przykładowymi metodami uwierzytelniania są:
+
+\begin{description}
+    \item[trust] Umożliwia połącznie jako dowolny użytkownik z kolumny USER bez
+        uwierzytelniania
+    \item[peer] Umożliwia połączenie użytkownika, jeśli ma on na lokalnej
+        maszynie tę samą nazwę, co użytkownik bazy. Dostępne tylko dla połączeń
+        przez socketa.
+    \item[password] Uwierzytelnianie przez niezaszyfrowane hasło.
+    \item[scram-sha-256,md5] Uwierzytelnianie przez szyfrowane hasło.
+    \item[gss] Użycie Kerberos do uwierzytelniania.
+    \item[reject] Odrzuć połączenie (umożliwia np. tworzenie czarnej listy
+        hostów)
+\end{description}
+
+\chapter{Użytkownicy}
+
+\subsection{Tworzenie użytkowników}
+
+PostgreSQL posługuje się pojęciem „roli”. Określenie to może oznaczać zarówno
+użytkownika, jak i grupę użytkowników. Użytkownicy to role posiadające
+możliwość logowania. Role nie posiadające możliwości logowania mogą być
+wykorzystywane jako grupy.
+
+Nową rolę utworzyć można posługując się językiem SQL przy użyciu polecenia
+\texttt{CREATE ROLE}/\texttt{CREATE USER} albo z poziomu \emph{shella} przy
+pomocy narzędzia \texttt{createuser}
+
+Aby utworzyć użytkownika o nazwie „alicja” z uprawnieniami superużytkownika
+logującego się hasłem możemy użyć następujących poleceń SQL:
+
+\begin{minted}{postgresql}
+    CREATE USER alicja WITH SUPERUSER PASSWORD 'bardzotajne';
+    CREATE ROLE alicja WITH LOGIN SUPERUSER PASSWORD 'bardzotajne';
+\end{minted}
+
+lub też polecenia powłoki
+
+\begin{minted}{shell-session}
+    $ createuser alicja --pwprompt --superuser
+\end{minted}
+
+Role usuwamy poleceniem \texttt{DROP ROLE}.
+
+\subsection{Uprawnienia globalne}
+
+Role mogą posiadać następujące globalne uprawnienia:
+
+\begin{description}
+    \item[SUPERUSER] Rola może obejść wszystkie ograniczenia bazy danych.
+    \item[CREATEDB] Rola może tworzyć bazy danych.
+    \item[CREATEROLE] Rola może tworzyć nowe role.
+    \item[REPLICATION] Rola może być używana przy replikacji (więcej w
+        rozdziale o HA.
+\end{description}
+
+Te uprawnienia mogą być ustawiane w czasie tworzenia roli lub zmieniane przy
+pomocy polecenia \texttt{ALTER ROLE}
+
+\subsection{Przypisywanie użytkowników do ról}
+
+Do przypisania użytkownika do roli służy polecenie \texttt{GRANT} np. po
+wykonaniu:
+
+\begin{minted}{postgresql}
+    CREATE USER "alicja" WITH PASSWORD 'bardzotajne';
+    CREATE ROLE "admins" WITH CREATEROLE NOINHERIT;
+    CREATE ROLE "creators" WITH CREATEDB;
+    GRANT ROLE "admins" TO "alicja";
+    GRANT ROLE "creators" TO "alicja";
+\end{minted}
+
+Alicja będzie miała możliwość tworzenia baz danych. Jeśli zaś będzie chciała
+utworzyć rolę, będzie musiał ręcznie przełączyć się na rolę „admins”
+poleceniem:
+
+\begin{minted}{postgresql}
+    SET ROLE "admins";
+\end{minted}
+
+Aby odebrać rolę użytkownikowi używamy polecenia \texttt{REVOKE}. Np:
+
+\begin{minted}{postgresql}
+    REVOKE "admins" FROM "alicja";
+\end{minted}
+
+\chapter{Bazy danych}
+\section{Tworzenie baz}
+Bazy danych tworzymy poleceniem \texttt{CREATE DATABASE}. Polecenie
+\texttt{CREATE DATABASE "baza"} utworzy bazę danych, której właścicielem będzie
+użytkownik, który wykonał to polecenie, natomiast pozostałe ustawienia zostaną
+skopiowane z szablonu \texttt{template1}. Jeśli te ustawienia nas nie
+satysfakcjonują, możemy użyć własnych. Załóżmy, że zależy nam, aby baza danych
+prawidłowo pracowała z tekstem w języku polskim, np. stosowała polską kolejność
+alfabetyczną. W tym celu musimy upewnić się, że system operacyjny posiada
+zainstalowaną \emph{locale} \texttt{pl\_PL.utf8}.
+Następnie należy utworzyć na serwerze należy sprawdzić, czy istnieje obiekt
+\emph{collation} na serwerze. Wykonujemy w tym celu polecenie narzędzia
+\texttt{psql}: \texttt{\\dOS} albo też bezpośrednio wyszukujemy w bazie danych
+\texttt{postgres}:
+
+
+\begin{minted}{postgresql}
+    SELECT * FROM pg_collation;
+\end{minted}
+
+Jeśli polska lokalizacja jest niedostępna tworzymy ją poleceniem:
+
+\begin{minted}{postgresql}
+    CREATE COLLATION "pl_PL.UTF-8" (LOCALE='pl_PL.utf8');
+\end{minted}
+
+Teraz możemy już stworzyć bazę danych:
+
+\begin{minted}{postgresql}
+    CREATE DATABASE "baza" WITH OWNER="alicja" ENCODING="UTF-8"
+    LC_COLLATE="pl_PL.UTF-8" LC_CTYPE="pl_PL.UTF-8" TEMPLATE="template0";
+\end{minted}
+
+Użycie \texttt{template0} zamiast domyślnego \texttt{template1} jest wymagane,
+jeśli chcemy użyć lokalizacji innej, niż domyślna.
+
+
+
+\chapter{Optymalizacja}
+
+\chapter{Kopie zapasowe}
+
+\chapter{HA}
