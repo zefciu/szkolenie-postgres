@@ -6,4 +6,5 @@
 *.aux
 *.log
 *.pyg
+grafik.latex
 _minted-*
