@@ -314,6 +314,39 @@ jeśli chcemy użyć lokalizacji innej, niż domyślna.
 
 \chapter{Optymalizacja}
 
+TODO
+
 \chapter{Kopie zapasowe}
 
+\section{Użycie pg\_dump}
+
+Najprostszą metodą tworzenia kopii zapasowych bazy danych jest zastosowanie
+narzędzia \texttt{pg\_dump}. Narzędzie to generuje zrzut bazy danych. Może mieć
+ono postać pliku SQL, który może zostać załadowany do bazy poprzez wczytanie
+pliku poleceniem \texttt{psql}.
+
+\begin{minted}{shell-session}
+    $ pg_dump -U alicja moja_baza > zrzut.sql
+    $ psql -U alicja < zrzut.sql
+\end{minted}
+
+Możliwe jest również zapisanie zrzutu w innym formacie. Format „custom” jest
+skompresowany i umożliwia wybór tabel, które chcemy odtworzyć:
+
+\begin{minted}{shell-session}
+    $ pg_dump -U alicja moja_baza -Fc > zrzut.dump
+    $ pg_restore -U alicja -j4 -t mojatablica zrzut.dump
+\end{minted}
+
+W powyższym przykładzie odtwarzamy ze zrzutu tablicę „mojatablica” używając 4
+współbieżnych procesów.
+
+\section{Zrzuty plików}
+
+TODO
+
 \chapter{HA}
+
+TODO
+
+\end{document}
