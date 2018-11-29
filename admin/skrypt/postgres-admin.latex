@@ -310,7 +310,38 @@ Teraz możemy już stworzyć bazę danych:
 Użycie \texttt{template0} zamiast domyślnego \texttt{template1} jest wymagane,
 jeśli chcemy użyć lokalizacji innej, niż domyślna.
 
+\section{schema i tablespace}
 
+W bazie danych możemy tworzyć dwa rodzaje grupowań tabel: schema i tablespace.
+
+Schema to logiczna przestrzeń nazw umożliwiająca pogrupowanie tabel i wspólne
+zarządzanie nimi. Jeśli nie chcemy z nich korzystać, wszystkie tabele będą
+umieszczone w schema o nazwie \emph{public}.
+
+\begin{minted}{postgresql}
+    CREATE SCHEMA internal;
+    CREATE TABLE users(id SERIAL PRIMARY KEY, name VARCHAR(128));
+    CREATE TABLE internal.logs(id SERIAL PRIMARY KEY, content TEXT);
+\end{minted}
+
+Powyższy kod utworzy schemę o nazwie \texttt{internal} oraz dwie tabele. Jedną w
+schemie \texttt{public}, a jedną w \texttt{internal}. Taka konwencja może być
+wykorzystana np. aby umożliwić korzystanie z pewnego zbioru tabel tylko
+wybranym użytkownikom.
+
+Tablespace to określenie fizycznej lokalizacji, w której mają być przechowywane
+określone tabele. Dzięki nim możliwe jest fizyczne partycjonowanie bazy danych.
+
+\begin{minted}{postgresql}
+    CREATE TABLESPACE critical LOCATION '/mnt/sdc/data' -- dysk SSD
+    CREATE TABLESPACE archive LOCATION '/mnt/sdb/data' -- dysk HDD
+    CREATE TABLE users(id SERIAL PRIMARY KEY, name VARCHAR(128))
+        TABLESPACE critical;
+    CREATE TABLE logs(id SERIAL PRIMARY KEY, content TEXT) TABLESPACE archive;
+\end{minted}
+
+Powyższa konfiguracja umieści tabelę użytkowników na dysku SSD, a tabelę logów
+na dysku HDD.
 
 \chapter{Optymalizacja}
 
@@ -343,7 +374,63 @@ współbieżnych procesów.
 
 \section{Zrzuty plików}
 
-TODO
+Innym podejściem przy tworzeniu kopii zapasowych jest bezpośrednie skopiowanie
+plików bazy danych. Taki backup można wykonać bardzo szybko, jednak jego wadą
+jest, iż potrzebujemy do jego wykonania pełnego zatrzymania bazy. W przeciwnym
+wypadku pliki te mogą zawierać stan niespójny.
+
+\section{Wykorzystanie plików WAL}
+
+WAL (Write-Ahead Log) to metoda wykorzystywana wewnętrznie przez PostgreSQL w
+celu zapewnienia spójności bazy danych. PostgreSQL loguje wszystkie operacje
+\emph{zanim} je wykona. Dzięki temu może przywrócić spójny stan bazy w sytuacji
+niespodziewanego przerwania działania serwera.
+
+Logi WAL możemy wykorzystać również do przeprowadzania backupu bazy danych. W
+metodzie tej łączymy bezpośrednie zrzuty plików z bazy danych z plikami WAL.
+Zrzut plików dostarcza nam stanu bazy w określonym punkcie czasowym (ten stan
+może być niespójny). Pliki WAL natomiast stanowią inkrementalny zapis zmian.
+
+\subsection{Procedura tworzenia inkrementalnych kopii zapasowych bazy}
+
+Aby skonfigurować rozpoczęcie archiwizowania plików WAL musimy skonfigurować w
+pliku \texttt{postgresql.conf}:
+
+\begin{enumerate}
+    \item \texttt{wal\_level} powinno być ustawione na \texttt{archive} (dla
+        PostgreSQL <= 9) lub \texttt{replica} (nowsze wersje)
+    \item \texttt{archive\_mode} na \texttt{on}
+    \item \texttt{archive\_command} powinno być komendą kopiującą plik o nazwie
+        \texttt{\%f} oraz pełnej ścieżce \texttt{\%p} w odpowiednie miejsce
+    \item \texttt{archive\_timeout} może być zmieniona, jeśli nasza baza
+        wykazuje mały ruch, a insteresuje nas częsty zapis.
+\end{enumerate}
+
+Od tego momentu powinniśmy zacząć zbierać pliki WAL.
+
+Aby wykonać zrzut plików bazy danych wykorzystać możemy polecenie
+\texttt{pg\_basebackup}. Polecenie to zapisuje pliki bazy w postacie katalogu
+lub archiwum \texttt{tar}.
+
+Katalog będzie zawierał plik o nazwie \texttt{backup\_label}. Plik ten zawiera
+informacje na temat numeru najwcześniejszego pliku WAL, który musi być
+zachowany. Możemy usunąć wcześniejsze pliki WAL.
+
+\subsection{Odzyskiwanie bazy danych}
+
+Odzyskiwanie bazy danych należy przeprowadzić przy zatrzymanym serwerze. Należy
+skopiować zarchiwizowane pliki bazy danych do katalogu klastra bazy danych.
+Należy upewnić się, że pliki te mają właściwego właściciela (użytkownik
+\texttt{postgres} i uprawnienia (niedostępne dla innych użytkowników).
+Usunąć też możemy obecne w katalogu \texttt{pg\_xlog} stare pliki WAL, jeśli
+posiadamy zarchiwizowane aktualne pliki.
+Następnie tworzymy w tym katalogu plik o nazwie \texttt{recovery.conf}, który
+powinien zawierać definicję parametru \texttt{restore\_command}, która kopiuje
+plik z archiwum do miejsca wskazanego przez \texttt{\%p}.
+Aby użytkownicy nie zakłócali procesu odzyskiwania dobrze jest uniemożliwić im
+połączeń zanim uruchomimy serwer. Po uruchomieniu serwer wchodzi w stan
+odzywskiwania. Gdy go ukończy plik \texttt{recovery.conf} zmieni nazwę na
+\texttt{recovery.done}
 
 \chapter{HA}
 
