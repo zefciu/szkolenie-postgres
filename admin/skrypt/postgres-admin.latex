@@ -398,13 +398,54 @@ wielka, by zmieścić się na jednym dysku.
 
 Powyższy kod spowoduje powstanie spartycjonowanej tabeli, która będzie
 przechowywać użytkowników o id parzystym w przestrzeni zdefiniowanej wcześniej
-jako \texttt{disk_0}, a tych o nieparzystym w przestrzeni \texttt{disk_1}.
+jako \texttt{disk\_0}, a tych o nieparzystym w przestrzeni \texttt{disk\_1}.
 
 
 
-\chapter{Optymalizacja}
+\chapter{Optymalizacja i utrzymanie bazy}
 
-TODO
+W czasie użytkowania tabele wymagają czynności związanych z ich utrzymaniem. Są
+to przede wszystkim:
+
+\section{ANALYZE}
+
+Komenda ANALYZE wykonuje analizę danych w bazie lub pojedynczej tabeli. Analiza
+ta polega na zbieraniu statystyk określający takie informacje, jak liczba
+rzędów zawierających \texttt{NULL} dla danej kolumny, liczbę unikalnych
+wartości w kolumnie, czy średni rozmiar danych. Statystyki te są wykorzystywane
+przez planer do tworzenia planów zapytań, dlatego od ich akturalności zależy
+wydajność zapytań do bazy danych. Jeśli chcemy sami ,,podejrzeć'' te wartości
+możemy wywołać polecenie \texttt{ANALYZE VERBOSE}.
+
+\section{VACUUM}
+
+Ze względów wydajnościowych PostgreSQL nie usuwa fizycznie rzędów, które
+usuwamy z bazy, natomiast edycję rekordów przeprowadza poprzez stworzenie
+nowego rzędu i oznaczenie starego jako usuniętego. W ten sposób powstają
+,,martwe rzędy'', które musimy regularnie usuwać, aby uniknąć niekontrolowanego
+rozrostu bazy danych. Polecenie \texttt{VACUUM} posiada dwie główne wersje:
+prostą oraz \texttt{VACUUM FULL}. Prosta forma usuwa martwe rzędy i pozwala na
+ponowne wykorzystanie danych w tej samej tabeli. Wersja \texttt{FULL} tworzy
+fizycznie nową tabelę i przepisuje starą tabelę do nowego miejsca. Przez to 
+forma ta wymaga pełnego zablokowania tabeli oraz istnienia na dysku wolnego
+miejsca. Po \texttt{VACUUM FULL} odzyskana przestrzeń zwracana jest do systemu
+operacyjnego i może być ponownie wykorzystana przez inne aplikacje. Korzystanie
+z \texttt{VACUUM FULL} nie jest koniecznej przy normalnym korzystaniu z bazy
+danych, kiedy rozmiar tabeli rośnie lub utrzymuje się na podobnym poziomie.
+
+\section{autovacuum}
+
+Analiza i czyszczenie martwych rzędów może być przeprowadzane automatycznie.
+Jest to zalecane i domyślnie włączone w nowszych wersjach PostgreSQL.
+Funkcjonalność ta zwana jest \emph{autovacuum}. Demon \emph{autovacuum} działa
+w kilku procesach określonych parametrem \texttt{autovacuum\_max\_workers} i
+okresowo przeszukuje tabele, dla których liczba usuniętych (dla
+\texttt{VACUUM} i \texttt{ANALYZE}) bądź dodanych czy zedytowanych (tylko
+\texttt{ANALYZE}) rzędów przekracza odpowiedni próg. Próg ten konfigurujemy
+jako pewną wartość minimalną (\texttt{autovacuum\_vacuum\_threshold} lub
+\texttt{autovacuum\_analyze\_threshold}) powiększoną o pewien ułamek rozmiaru tabeli
+(\texttt{autovacuum\_vacuum\_scale\_factor}, \texttt{autovacuum\_vacuum\_scale\_factor}).
+
 
 \chapter{Kopie zapasowe}
 
