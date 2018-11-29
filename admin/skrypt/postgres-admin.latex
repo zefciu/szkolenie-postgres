@@ -310,6 +310,20 @@ Teraz możemy już stworzyć bazę danych:
 Użycie \texttt{template0} zamiast domyślnego \texttt{template1} jest wymagane,
 jeśli chcemy użyć lokalizacji innej, niż domyślna.
 
+\section{Tworzenie tabel}
+
+Aby utworzyć tabelę w bazie danych używamy polecenia \texttt{CREATE TABLE}. Np.
+\begin{minted}{postgresql}
+    CREATE TABLE people(
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) COLLATE 'pl_PL.UTF-8'
+    );
+\end{minted}
+
+Powyższy przykład pokazuje możliwość nadpisania danych językowych bazy danych
+dla konkretnych kolumn.
+
+
 \section{schema i tablespace}
 
 W bazie danych możemy tworzyć dwa rodzaje grupowań tabel: schema i tablespace.
@@ -342,6 +356,51 @@ określone tabele. Dzięki nim możliwe jest fizyczne partycjonowanie bazy danyc
 
 Powyższa konfiguracja umieści tabelę użytkowników na dysku SSD, a tabelę logów
 na dysku HDD.
+
+\section{Partycjonowanie tabel}
+
+Tabele mogą być dzielone na partycje. Załóżmy, że chcemy dane działań
+wykonanych od roku 2018 przechowywać na dysku SSD, a dane wcześniejsze – na
+dysku obrotowym. W takim przypadku tworzymy spartycjonowaną tabelę w
+następujący sposób:
+
+\begin{minted}{postgresql}
+    CREATE TABLE actions(
+        id SERIAL PRIMARY KEY,
+        content VARCHAR(128),
+        date_performed DATE,
+    ) PARTITION BY RANGE(action_ts);
+
+    CREATE TABLE actions_archive PARTITION OF actions
+        FOR VALUES FROM (MINVALUE) TO ('2017-12-31')
+        TABLESPACE archive;
+    CREATE TABLE actions_current PARTITION OF actions
+        FOR VALUES FROM ('2018-01-01')
+        TABLESPACE critical;
+\end{minted}
+
+Innym zastosowaniem partycji może być podzielenie tabeli, która jest zbyt
+wielka, by zmieścić się na jednym dysku.
+
+\begin{minted}{postgresql}
+    CREATE TABLE people(
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(128),
+    ) PARTITION BY HASH(id);
+
+    CREATE TABLE people_0 PARTITION OF people
+        FOR VALUES WITH (MODULUS 2, REMAINDER 0)
+        TABLESPACE disk_0;
+    CREATE TABLE  PARTITION OF people
+        FOR VALUES FROM (MODULUS 2, REMAINDER 1)
+        TABLESPACE disk_1;
+\end{minted}
+
+Powyższy kod spowoduje powstanie spartycjonowanej tabeli, która będzie
+przechowywać użytkowników o id parzystym w przestrzeni zdefiniowanej wcześniej
+jako \texttt{disk_0}, a tych o nieparzystym w przestrzeni \texttt{disk_1}.
+
+
 
 \chapter{Optymalizacja}
 
