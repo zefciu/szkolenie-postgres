@@ -101,7 +101,8 @@ Dzień 4
 3. Typy danych geometrycznych i geograficznych
 4. Podstawowe funkcje działające na danych GIS
 5. Wyświetlanie i eksport danych GIS
-6. Ćwiczenia praktyczne – praca z danymi geograficznymi Lasów Państwowych
+6. Ćwiczenia praktyczne – praca z danymi geograficznymi Lasów Państwowych oraz
+   Instytutu Badawczego Leśnictwa
 
 Dzień 5
 """""""""""
@@ -109,4 +110,5 @@ Dzień 5
 1. Indeksy przestrzenne i ich zastosowanie
 2. Strategie przechowywania danych geograficznych, wykorzystywanie wyzwalaczy
 3. Praca z danymi rastrowymi
-4. Ćwiczenia praktyczne – praca z danymi rastrowymi Lasów Państwowych
+4. Ćwiczenia praktyczne – praca z danymi rastrowymi Lasów Państwowych oraz
+   Instytutu Badawczego Leśnictwa
