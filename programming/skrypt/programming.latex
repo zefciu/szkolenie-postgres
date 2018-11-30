@@ -1,0 +1,82 @@
+\documentclass[openany,twoside]{book}
+\usepackage{layout}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{minted}
+\usepackage{ccicons}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{upquote}
+\begin{document}
+\title{Programowanie baz PostgreSQL}
+\author{Szymon Pyżalski}
+
+\maketitle
+
+ \vspace*{\fill}
+ Niniejszy skrypt dostępny jest na licencji\\
+ Creative Commons  Uznanie autorstwa -- Na tych samych warunkach 4.0\\
+ Pewne prawa zastrzeżone.\\
+ \url{https://creativecommons.org/licenses/by-sa/4.0/legalcode.pl}\\
+ \ccbysa
+
+\chapter{Język PL/pgSQL – wprowadzenie}
+
+Język PL/pgSQL jest proceduralnym rozszerzeniem języka SQL. Dodaje on możliwość
+np. definiowania zmiennych, czy stosowania imperatywnych poleceń sterujących
+przy jednoczesnym zachowaniu przypominającej SQL składni. Jednocześnie język
+ten uniemożliwia użytkownikom wykonanie niechcianych operacji.
+
+\section{Podstawowa struktura języka}
+
+Przykładowa funkcja:
+
+\begin{minted}{postgresql}
+    CREATE OR REPLACE FUNCTION active_num()
+    RETURNS integer AS $$
+    DECLARE
+        total integer;
+    BEGIN
+        SELECT count(id) into total FROM people WHERE deactivate_ts > now();
+        RETURN total;
+    END;
+    $$ LANGUAGE plpgsql;
+\end{minted}
+
+Powyższa funkcja zwraca liczbę użytkowników, dla których wartość w kolumnie
+\texttt{deactivate\_ts} jest późniejsza, niż obecna godzina.
+
+Format \texttt{CREATE OR REPLACE} powoduje, że funkcja zostanie utworzona,
+jeśli dotychczas nie istniała, natomiast zmieniona, jeśli była zdefiniowana już
+wcześniej. Podwójne znaki dolara stanowią formę cudzysłowu. Możliwe jest też
+użycie dowolnej etykiety pomiędzy znakami dolara. W ten sposób możemy
+zagnieżdżać te cudzysłowy.
+
+\section{Deklaracje zmiennych}
+
+W języku PL/pgSQL możemy używać takich samych typów, jak w czystym SQL.
+Dodatkowo jednak możemy stosować kalki istniejących typów. Np:
+
+
+\begin{minted}{postgresql}
+    DECLARE
+        name users.username%TYPE;
+        result users%ROWTYPE;
+        some_record RECORD;
+\end{minted}
+
+W powyższej deklaracji zmienna \texttt{name} będzie miała ten sam typ, co
+kolumna \texttt{username} w tabeli \texttt{users}. Zmienna \texttt{result}
+będzie przechowywać całe rzędy identyczne jak w tabeli \texttt{users}. Zmienna
+\texttt{some\_record} przechowywać może dowolne rzędy danych.
+
+\section{Ustawianie wartości zmiennych}
+
+Wartości zmiennych można ustawiać popprzez użycie operatora przypisania
+\begin{minted}{postgresql}
+    name := 'admin';
+\end{minted}
+
+lub też przy pomocy słowa \texttt{INTO} 
+
+\end{document}
