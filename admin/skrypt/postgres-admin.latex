@@ -464,6 +464,157 @@ Powyższe polecenie sprawi, że użytkownik \texttt{alice} będzie miał prawo
 wykonywania poleceń \texttt{SELECT} na tabelach utworzonych w przyszłości w
 schemie \texttt{internal}.
 
+\chapter{Spójność bazy}
+
+\section{Transakcje}
+
+PostgreSQL jest transakcyjną bazą danych. Oznacza to, że operacje na bazie mogą
+być grupowane w transakcje. Transakcja taka może zostać wykonana w całości, lub
+też w całości może się nie powieść. Gwarantowane jest natomiast, że nie
+zostanie wykonana tylko część operacji w ramach transakcji. Aby wykonać
+operacjje w sposób transakcyjny należy ująć zbiór operacji w polecenia
+\texttt{BEGIN} oraz \texttt{END}. Np. wykonanie:
+
+\begin{minted}{postgresql}
+    BEGIN;
+    UPDATE accounts SET money = money - 100 WHERE username = 'alice';
+    UPDATE accounts SET money = money + 100 WHERE username = 'bob';
+    END;
+\end{minted}
+
+spowoduje przeniesienie 100 jednostek z konta Alicji na konto Boba. Jeśli
+jednak któraś z tych operacji nie powiodła się (bo np. zabroniliśmy wartości
+ujemnych w kolumnie pieniędzy, a Alicja nie posiada wystarczających środków)
+żadna z operacji nie zostanie wykonana. Transakcyjność broni nas przed
+sytuacją, w której pieniądze mogłyby przepaść w systemie, lub pojawić się
+,,znikąd''.
+
+Transakcje możemy w każdej chwili przerwać i cofnąć poleceniem
+\texttt{ROLLBACK}
+
+\section{Izolacja trannsakcji}
+
+O ile transakcje zabezpieczają nas przed sytuacją, w której zostatnie wykonane
+tylko część operacji, istnieją inne zjawiska, które mogą wystąpić nawet w
+systemie transakcyjnym. Są to:
+
+\begin{description}
+    \item[Brudny odczyt] odczytywane są dane zapisane w transakcji, która nie
+        została zacommitowana. Sytuacja ta nigdy nie zdarza się w PostgreSQL.
+    \item[Niepowtarzalny odczyt] kilkakrotny odczyt tych samych rzędów w ramach
+        transakcji daje różne dane
+    \item[Odczyt fantomowy] kilkakrotne powtórzenie tego samego filtrowania
+        daje różne rzędy
+    \item[Anomalie serializacyjne] po wykonaniu obu transakcji osiągamy stan,
+        który nie mógłby być uzyskany przez wykonanie tych transakcji jedna po
+        drugiej w dowolnej kolejności
+\end{description}
+
+Aby zapobiegać tym zjawiskom stosujemy izolację transakcji. Możemy podać
+stopień izolacji w poleceniu \texttt{BEGIN} lub potem przy pomocy polecenia
+\texttt{SET TRANSACTION}.
+
+Np.
+\begin{minted}{postgresql}
+    BEGIN ISOLATION LEVEL REPEATABLE READ;
+\end{minted}
+
+jest równoważne:
+
+\begin{minted}{postgresql}
+    BEGIN;
+    SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+\end{minted}
+
+Dostępne stopnie izolacji to:
+
+\begin{description}
+    \item[READ COMMITTED] w tym trybie nie widzimy danych, które nie zostały
+        zacommitowane. Możliwe są jednak zmiany danych w czasie transakcji.
+    \item[REPEATABLE READ] w tym trybie dostępny jest dla nas stały stan bazy
+        danych. Zmiany wykonane przez inne transakcje nie mają wpływu na nasze
+        wyszukiwania i na dane, które uzyskujemy.
+    \item[SERIALIZABLE] w tym trybie wszystkie transakcje sumaryczny efekt
+        działania wszystkich transakcji będzie taki sam, jak gdyby transakcje
+        te były wykonane jedna po drugiej. Jeśli to niemożliwe, zostanie
+        wyświetlony błąd i transakcja będzie musiała być cofnięta.
+\end{description}
+
+Ze względu na kompatybilność ze standardem SQL dopuszczalna jest też izolacja
+\texttt{READ UNCOMMITTED} jednak nie różni się ona w praktyce od \texttt{READ
+COMMITTED}. Brudne odczyty nie są w niej możliwe.
+
+\section{Więzy spójności i indeksy}
+
+Dla zapewnienia spójności bazy danych możliwe jest określenie więzów spójności.
+
+\subsection{Unikalność}
+
+Użycie słowa \texttt{UNIQUE} w definicji kolumny powoduje, że dana wartość w
+kolumnie nie może się powtarzać. Nie dotyczy to jednak wartości \texttt{NULL}.
+Użycie tego słowa powoduje automatyczne utworzenie indeksu. Jeśli chcemy
+zapewnić unikalność jakiegoś zbioru kolumn dodajemy słowo \texttt{UNIQUE} pod
+definicją kolumn. Np. tabela:
+
+\begin{minted}{postgresql}
+    CREATE TABLE people (
+        id SERIAL PRIMARY KEY,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
+        pesel CHAR(11) NULL UNIQUE,
+        UNIQUE (first_name, last_name)
+    );
+\end{minted}
+
+Musi zawierać \texttt{id} (\texttt{PRIMARY KEY} implikuje \texttt{NOT NULL}),
+texttt{first\_name} i \texttt{last\_name}. Wartość \texttt{pesel} może być
+\texttt{NULL} jednak jeśli wartość jest ustawiona, musi być ona unikalna.
+Dodatkowo każda kombinacja imienia i nazwiska musi być unikalna.
+
+\subsection{Klucze obce}
+
+Klucz obcy upewnia nas, że dane w danej kolumnie odpowiadają danym w kolumnie
+innej tabeli. Np. dla tabel:
+
+\begin{minted}{postgresql}
+    CREATE TABLE people (
+        id SERIAL PRIMARY KEY,
+        first_name VARCHAR(255) NOT NULL,
+    );
+    CREATE TABLE articles (
+        id SERIAL PRIMARY KEY,
+        author_id REFERENCES people NULL ON DELETE SET NULL,
+        content TEXT NOT NULL,
+    );
+    CREATE TABLE comments (
+        id SERIAL PRIMARY KEY,
+        author_id REFERENCES people NOT NULL ON DELETE CASCADE,
+        content TEXT NOT NULL,
+    );
+\end{minted}
+
+klucze obce upewniają nas, że każdy komentarz będzie posiadał istniejącego
+autora. Dodatkowo artykuły mogą nie posiadać autora (wartość \texttt{NULL}).
+Jeśli usuniemy osobę, jej komentarze zostaną usunięte z bazy danych, artykuły
+zaś będą widniały jako nieposiadające autora.
+
+\subsection{Ograniczenia}
+
+Możliwe jest określenie ręczne ograniczeń. Np. 
+
+\begin{minted}{postgresql}
+    CREATE TABLE people (
+        id serial PRIMARY KEY,
+        username character varying(255) NOT NULL,
+        account money CHECK (money > 0),
+        credit_limit money,
+        credit money,
+        CONSTRAINT (credit <= credit_limit)
+    );
+\end{minted}
+
+\subsection{
+
 \chapter{Optymalizacja i utrzymanie bazy}
 
 W czasie użytkowania tabele wymagają czynności związanych z ich utrzymaniem. Są
@@ -596,6 +747,34 @@ odzywskiwania. Gdy go ukończy plik \texttt{recovery.conf} zmieni nazwę na
 
 \chapter{HA}
 
-TODO
+\section{WAL shipping}
+PostgreSQL dysponuje wbudowaną możliwością konfiguracji replikacji poprzez
+mechanizm zwany \emph{WAL shipping}. Jest to mechanizm oparty na tej samej
+zasadzie, co odzyskiwanie bazy na podstawie plików WAL. Serwer \emph{master}
+wysyła pliki WAL do serwerów \emph{slave}. Na tej podstawie serwery
+\emph{slave} znajdujące się permanentnie w stanie \emph{recovery} aktualizują
+swój stan. Serwery te mogą być skonfigurowane jako \emph{warm standby} i nie
+przyjmować żadnych połączeń do momentu, gdy zostaną promowane jako nowy
+\emph{master}. Mogą też służyć jako serwery \emph{read only} – serwer określamy
+wtedy jako \emph{hot standby}.
+
+Przykładowym rozwiązaniem pozwalającym skonfigurować \emph{WAL shipping} wraz z
+automatyczną promocją w razie awarii serwera \emph{master} jest reprmgr.
+
+\section{Replikacja logiczna}
+W replikacji logicznej serwery publikują zmiany, jakie w nich zachodzą, które
+mogą być odczytywane przez inne serwery. Metoda ta umożliwia konfigurację
+\emph{multi-master}, w której więcej niż jeden serwer dopuszcza zapis.
+Konfiguracja taka może powodować konflikty, które muszą być rozwiązywane bądź
+ręcznie, bądź też automatycznie. Przykładowym rozwiązaniem umożliwiającym
+replikację logiczną jest pglogical.
+
+\section{Replikacja oparta o middleware}
+W przypadku, gdy baza nie jest bardzo obciążona przez zapis, natomiast
+wykonywane jest na niej dużo operacji odczytu, możliwe jest użycie tego
+prostego rozwiązania. W rozwiązaniu tym \emph{load balancer} dba o to, aby
+operacje zmieniające stan bazy danych były wysyłane do wszystkich serwerów.
+Natomiast operace odczytu -- tylko do jednego. Takim rozwiązaniem jest pg-pool.
+
 
 \end{document}
