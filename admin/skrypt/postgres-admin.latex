@@ -400,7 +400,69 @@ Powyższy kod spowoduje powstanie spartycjonowanej tabeli, która będzie
 przechowywać użytkowników o id parzystym w przestrzeni zdefiniowanej wcześniej
 jako \texttt{disk\_0}, a tych o nieparzystym w przestrzeni \texttt{disk\_1}.
 
+\section{Uprawnienia dla baz i tabel}
 
+Domyślnie uprawnienia do dostępu i edycji danych posiadają superużytkownicy
+klastra oraz właściciel bazy. Oprócz tego możemy nadawać poszczególnym
+rolom następujące uprawnienia:
+
+\begin{description}
+    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
+        Jest też potrzebne przy zapytaniach \texttt{DELETE} oraz
+        \texttt{UPDATE} jeśli posiadają one jakiekolwiek warunki.
+    \item[UPDATE, DELETE, INSERT] Użycie zapytań o tych nazwach na
+        tabeli.
+    \item[REFERENCES] Tworzenie kluczy obcych między danymi kolumnami
+        lub kolumnami w danej tabeli.
+    \item[TRIGGER] Tworzenie wyzwalaczy.
+    \item[CREATE] Tworzenie schemy w danej bazie danych lub tabel w
+        danej schemie.
+    \item[CONNECT] Łączenie się z daną bazą danych (duplikuje funkcjonalność
+        pliku \texttt{pg\_hba.conf}
+    \item[TEMP] Tworzenie tabel tymczasowych
+    \item[EXECUTE] Użycie danej funkcji
+    \item[USAGE] Pisanie procedur w danym języku
+\end{description}
+
+Aby nadać uprawnienie używamy polecenia \texttt{GRANT}. Na przykład:
+
+\begin{minted}{postgresql}
+    GRANT INSERT ON logs TO alice;
+\end{minted}
+
+Nada użytkownikowi \texttt{alice} uprawnienia do wstawiania rekordów do tabeli
+\texttt{logs}.
+
+\begin{minted}{postgresql}
+    GRANT SELECT ON record\_types TO PUBLIC;
+\end{minted}
+
+Nada wszystkim użytkownikom (którzy mogą łączyć się z bazą) możliwość
+wykonywania zapytań \texttt{SELECT} na tabeli \texttt{record\_types}.
+
+\begin{minted}{postgresql}
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA internal TO alice;
+\end{minted}
+
+Nada użytkownikowi \texttt{alice} wszystkie uprawnienia dla wszystkich tabel w
+schemie \texttt{internal}
+
+Aby odebrać uprawnienie używamy polecenia \texttt{REVOKE}
+
+\begin{minted}{postgresql}
+    REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA internal FROM alice;
+\end{minted}
+
+Możlwe jest też określenie uprawnień dla tabel, które jeszcze nie istnieją:
+
+\begin{minted}{postgresql}
+    ALTER DEFAULT PRIVILEGES IN SCHEMA internal
+        GRANT SELECT ON TABLES TO alice;
+\end{minted}
+
+Powyższe polecenie sprawi, że użytkownik \texttt{alice} będzie miał prawo
+wykonywania poleceń \texttt{SELECT} na tabelach utworzonych w przyszłości w
+schemie \texttt{internal}.
 
 \chapter{Optymalizacja i utrzymanie bazy}
 
