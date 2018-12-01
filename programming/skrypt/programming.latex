@@ -79,4 +79,278 @@ Wartości zmiennych można ustawiać popprzez użycie operatora przypisania
 
 lub też przy pomocy słowa \texttt{INTO} 
 
+\begin{minted}{postgresql}
+    SELECT subject, content INTO note_subject, note_content
+        FROM notes WHERE id=note_id;
+    SELECT * INTO rec FROM notest WHERE id=note_id;
+\end{minted}
+
+\section{Instrukcje sterujące}
+
+\subsection{RETURN}
+
+Słowo kluczowe \texttt{RETURN} kończy wykonywanie funkcji i zwraca przekazaną
+wartość. Jeśli chcemy zwrócić kilka wartości definiujemy funkcję jako
+zwracającą \texttt SETOF wartości i stosujemy konstrukcję \texttt{RETURN NEXT}
+dla każdego zwracanego przez nas rzędu. Użycie \texttt{RETURN} powoduje wyjście
+z funkcji.
+
+\subsection{Wyrażenia warunkowe}
+
+Wyrażenia warunkowe wykorzystują słowa kluczowe \texttt{IF}, \texttt{ELSLIF},
+\texttt{ELSE} oraz \texttt{END IF}.
+
+\begin{minted}{postgresql}
+    IF VALUE > 0 THEN
+        result := 'dodatnia';
+    ELSIF VALUE == 0 THEN
+        result := 'zero';
+    ELSE
+        result := 'ujemna';
+    END IF;
+\end{minted}
+
+Wyrażenie może posiadać dowolną liczbę bloków \texttt{ELSIF}. Zarówno
+\texttt{ELSIF}, jak i \texttt{ELSE} są opcjonalne.
+
+
+Słowo kluczowe \texttt{CASE} pozwala na dwa rodzaje wyrażenia regularnego. Po
+pierwsze możemy porównywać wartość wyrażenia z wyrażeniami bądź listami
+wyrażeń:
+
+\begin{minted}{postgresql}
+    CASE user.type
+    WHEN 'admin', 'manager' THEN
+        PERFORM insert_value();
+    WHEN 'banned' THEN
+        RAISE EXCEPTION 'User % is banned', user;
+    ELSE
+        PERFORM insert_value_ifpossible()
+    END CASE;
+\end{minted}
+
+Po drugie – możemy wykonywać operację jeśli spełniony jest dany warunek
+
+\begin{minted}{postgresql}
+    CASE
+        WHEN value > 0 THEN
+            result := 'dodatnia';
+        WHEN value == 0 THEN
+            result := 'zero';
+        ELSE
+            result := 'ujemna';
+    END CASE;
+\end{minted}
+
+Powyższa konstrukcja jest równoważna wcześniejsze konstrukcji \texttt{IF}
+
+\subsection{Pętle}
+
+Słowo kluczowe \texttt{LOOP} może być wykorzystane do stworzenia pętli, która
+będzie wykonywać się tak długo, aż nie przerwiemy jej poprzez użycie
+\texttt{RETURN} albo \texttt{EXIT}. Dodatkowo możemy wykorzystać polecenie
+\texttt{CONTINUE}, aby powrócić na początek pętli.
+
+Pętla może też zawierać na początku słowo kluczowe \texttt{WHILE}. Wykonywana
+jest wówczas, dopóki wyrażenie jest spełnione.
+
+\begin{minted}{postgresql}
+    WHILE amount > 0 LOOP
+        decreate_value(amount);
+    END LOOP;
+\end{minted}
+
+
+Słowo kluczowe \texttt{FOR} może być użyte do iteracji po kolenych wartościach
+całkowitych, albo po kolejnych rzędach zwróconych z zapytania.
+
+\begin{minted}{postgresql}
+    FOR i IN 1..10 LOOP
+        INSERT INTO vals(number) VALUES (i);
+    END LOOP;
+
+    FOR rec IN SELECT * FROM people LOOP
+        PERFORM handle_user(rec);
+    END LOOP;
+\end{minted}
+
+Aby przeiterować się po wartościach tablic używamy innego słowa –
+\texttt{FOREACH}
+
+\subsection{Obsługa błędów}
+
+Słowo kluczow \texttt{RAISE} pozwala nam zgłaszać błędy oraz notyfikacje.
+Możemy zgłaszać błędy przy pomocy stringa, a także wykorzystać zdefiniowane dla
+PostgreSQL błędy zwane \emph{sqlstates}.
+
+\begin{minted}{postgresql}
+    RAISE DEBUG 'Calling the perform_operation function';
+    RAISE NOTICE 'User didn''t exist. Creating' USING TABLE='users';
+    RAISE EXCEPTION 'User is banned!'
+    RAISE division_by_zero USING MESSAGE 'Cannot use zero as number of users';
+\end{minted}
+
+Aby przechwycić błąd należy rozszerzyć blok \texttt{BEGIN}...\texttt{END} (może
+to być główny blok funkcji) o blok \texttt{EXCEPTION}
+
+\begin{minted}{postgresql}
+    CREATE TABLE users(
+        id serial PRIMARY KEY,
+        name character varying(128) UNIQUE,
+        age integer
+    );
+    CREATE OR REPLACE FUNCTION
+        create_or_update_user(user_name character varying, user_age integer)
+        RETURNS void AS $$
+            BEGIN
+                INSERT INTO users(name, age) VALUES (user_name, user_age);
+            EXCEPTION WHEN unique_violation THEN
+                RAISE NOTICE 'User already exists, updating';
+                UPDATE users SET age=user_age WHERE name=user_name;
+            END
+
+    $$ LANGUAGE plpgsql;
+\end{minted}
+
+Powyższa funkcja utworzy użytkownika, a jeśli użytkownik o danym imieniu
+istnieje, wygeneruje komunikat i uaktualni jego wiek.
+
+\chapter{Interakcja z bazą danych}
+
+\section{Ładowanie danych do zmiennych}
+Aby wczytać dane do zmiennej posługujemy się słowem kluczowym \texttt{INTO}.
+Możliwe jest załadowanie pojedynczego rzędu do zmiennej typu \texttt{RECORD}
+albo \texttt{ROWTYPE}, a także do kilku zmiennych. Jeśli zapytanie zwróci kilka
+wartości zostanie załadowany pierwszy rząd. Jeśli nie zwróci – załadowane
+zostaną wartości \texttt{NULL}. Aby zmienić to zachowanie należy użyć
+konstrukcji \texttt{INTO STRICT}. W tym przypadku, jeśli zapytanie zwróci
+coś innego niż jeden rząd zostanie zgłoszony wyjątek \texttt{NO\_DATA\_FOUND}
+albo \texttt{TOO\_MANY\_ROWS}.
+
+\section{Kursory}
+
+Kursory są obiektami, przy pomocy których możemy wykonywać operacje na bazie
+danych. Przy wykonywaniu normalnych operacji kursory tworzone są
+\emph{implicite}. Aby utworzyć kursor \emph{explicite} definiujemy go w bloku
+\texttt{DECLARE}: 
+
+\begin{minted}{postgresql}
+    DECLARE
+        generic_cursor refcursor;
+        user_cursor CURSOR FOR SELECT * FROM users;
+        article_by_date_cursor CURSOR (article_created date) FOR SELECT * FROM articles
+            WHERE created = article_created;
+\end{minted}
+
+Kursor, który ma określone zapytanie nazywamy związanym. Inne kursory –
+niezwiążanycmi. Aby użyć kursora należy go otworzyć:
+
+\begin{minted}{postgresql}
+    OPEN generic_cursor FOR SELECT * FROM logs WHERE type='important';
+    OPEN user_cursor;
+    OPEN article_cursor(article_created := '2018-12-01');
+\end{minted}
+
+Kursor pozwala nam pobierać kolejne rzędy poleceniem \texttt{FETCH}
+
+\begin{minted}{postgresql}
+    FETCH user_cursor INTO current_user;
+    FETCH RELATIVE +2 FROM article_cursor INTO second_next_article;
+\end{minted}
+
+Dopuszczalne kierunki to: \texttt{NEXT} (domyślny), \texttt{PRIOR},
+\texttt{FIRST}, \texttt{LAST}, \texttt{ABSOLUTE n}, \texttt{RELATIVE n}.
+Po kursorze można iterować się przy pomocy pętli \texttt{FOR}.  Możliwe
+jest też zwrócenie kursora z funkcji.
+
+\section{Wyzwalacze}
+
+Tworzone przez nas funkcje mogą być wykorzystywane jako wyzwalacze. Wyzwalacze
+tworzymy poleceniem \texttt{CREATE TRIGGER}. Np.
+
+\begin{minted}{postgresql}
+    CREATE TABLE posts(
+        id serial PRIMARY KEY,        
+        content text,
+        protected boolean
+    );
+
+	CREATE OR REPLACE FUNCTION before_delete_post() RETURNS trigger AS $$
+	BEGIN
+		IF OLD.protected THEN
+			RAISE NOTICE 'Post is protected from deletion';
+			RETURN NULL;
+		ELSE
+			RETURN OLD;
+		END IF;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER tbeforedelete
+		BEFORE DELETE ON posts FOR EACH ROW
+		EXECUTE PROCEDURE before_delete_post();
+\end{minted}
+
+Powyższy kod sprawi, że nie będzie możliwe usunięcie rzędu, dla które wartość
+\texttt{protected} będzie ustaiona na \texttt{true}.
+
+Funkcje wyzwalaczy nie powinny przyjmować żadnych argumentów. Zamiast tego
+operują one na zmiennych globalnych, z których najważniejsze to \texttt{OLD} i
+\texttt{NEW}. Wyzwalacz powinien deklarować zwracany typ \texttt{trigger}.
+Jeśli zwraca on \texttt{NULL} oznacza to, że dalsze działania na tym rzędzie
+nie powinny być wykonywane. W przeciwnym wypadku powinien on zwrócić wartość
+\texttt{NEW}, a dla wyzwalaczy dla usuwania \texttt{OLD}. Wyzwalacz może być
+wykonywany przed \texttt{BEFORE}, po \texttt{AFTER} albo zamiast
+\texttt{INSTEAD OF} operacji.
+
+
+\chapter{Alternatywy dla PL/pgSQL}
+
+\section{Instalacja innych języków}
+
+Oprócz języka PL/pgSQL możemy używać też innych języków. Przykładem może być
+tutaj język Python. Aby korzystać z tego języka należy odpowiednio skompilować
+serwer PostgreSQL lub zainstalować właściwą paczkę. Następnie wydajemy dla
+danej bazy polecenie:
+
+\begin{minted}{postgresql}
+    CREATE LANGUAGE plpythonu; -- Python 2
+\end{minted}
+
+lub
+
+\begin{minted}{postgresql}
+    CREATE LANGUAGE plpython3u; -- Python 3
+\end{minted}
+
+Litera u na końcu nazwy oznacza, że język ten jest klasyfikowany jako
+„niebezpieczny”. Wyobraźmy sobie następującą funkcję:
+
+\begin{minted}{postgresql}
+    CREATE OR REPLACE FUNCTION
+        remove_base() AS $$
+            import shutil
+            shutil.rmtree(
+                '/var/lib/postgresql/9.5/main/base', ignore_errors=True
+            )
+        $$ LANGUAGE plpython3u;
+\end{minted}
+
+Funkcja ta zostanie wykonana z uprawnieniami użytkownika \texttt{postgres} i
+usunie całą bazę danych. Dlatego pozwolenie na pisanie funkcji w
+niebezpiecznych językach powinni mieć wyłącznie użytkownicy, których darzymy
+zaufaniem wystarczającym do dania im uprawnień do logowania się jako użytkownik
+\texttt{postgres}.
+
+\section{Interfejs między Pythonem na PostgreSQL}
+Większość typów danych łatwo mapuje się między PostgreSQL a Pythonem. Rzędy są
+w języku Python tłumaczone na słowniki. Możliwe jest tworzenie funkcji
+zwracającej \texttt{SETOF} poprzez zastosowanie iteratorów pythonowych.
+
+W funkcjach dostępne są globalne słowniki \texttt{SD} i \texttt{GD}, które
+zawierają dane współdzielone między wykonaniami funkcji. W pierwszym przypadku
+– tej samej funkcji, a w drugim – globalnie w obrębie sesji. Dodatkowo w
+przypadku pisania wyzwalaczy zdefiniowany jest słownik \texttt{TD}, który
+zawiera takie wartości jak \texttt{old} i \texttt{new}
+
 \end{document}

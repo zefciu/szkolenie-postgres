@@ -227,7 +227,7 @@ logującego się hasłem możemy użyć następujących poleceń SQL:
 lub też polecenia powłoki
 
 \begin{minted}{shell-session}
-    $ createuser alicja --pwprompt --superuser
+    createuser alicja --pwprompt --superuser
 \end{minted}
 
 Role usuwamy poleceniem \texttt{DROP ROLE}.
@@ -315,8 +315,8 @@ jeśli chcemy użyć lokalizacji innej, niż domyślna.
 Aby utworzyć tabelę w bazie danych używamy polecenia \texttt{CREATE TABLE}. Np.
 \begin{minted}{postgresql}
     CREATE TABLE people(
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) COLLATE 'pl_PL.UTF-8'
+        id serial PRIMARY KEY,
+        name character varying(255) COLLATE 'pl_PL.UTF-8'
     );
 \end{minted}
 
@@ -334,8 +334,8 @@ umieszczone w schema o nazwie \emph{public}.
 
 \begin{minted}{postgresql}
     CREATE SCHEMA internal;
-    CREATE TABLE users(id SERIAL PRIMARY KEY, name VARCHAR(128));
-    CREATE TABLE internal.logs(id SERIAL PRIMARY KEY, content TEXT);
+    CREATE TABLE users(id serial PRIMARY KEY, name character varying(128));
+    CREATE TABLE internal.logs(id serial PRIMARY KEY, content text);
 \end{minted}
 
 Powyższy kod utworzy schemę o nazwie \texttt{internal} oraz dwie tabele. Jedną w
@@ -349,9 +349,9 @@ określone tabele. Dzięki nim możliwe jest fizyczne partycjonowanie bazy danyc
 \begin{minted}{postgresql}
     CREATE TABLESPACE critical LOCATION '/mnt/sdc/data' -- dysk SSD
     CREATE TABLESPACE archive LOCATION '/mnt/sdb/data' -- dysk HDD
-    CREATE TABLE users(id SERIAL PRIMARY KEY, name VARCHAR(128))
+    CREATE TABLE users(id serial PRIMARY KEY, name character varying(128))
         TABLESPACE critical;
-    CREATE TABLE logs(id SERIAL PRIMARY KEY, content TEXT) TABLESPACE archive;
+    CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
 \end{minted}
 
 Powyższa konfiguracja umieści tabelę użytkowników na dysku SSD, a tabelę logów
@@ -366,9 +366,9 @@ następujący sposób:
 
 \begin{minted}{postgresql}
     CREATE TABLE actions(
-        id SERIAL PRIMARY KEY,
-        content VARCHAR(128),
-        date_performed DATE,
+        id serial PRIMARY KEY,
+        content character varying(128),
+        date_performed timestamp,
     ) PARTITION BY RANGE(action_ts);
 
     CREATE TABLE actions_archive PARTITION OF actions
@@ -384,8 +384,8 @@ wielka, by zmieścić się na jednym dysku.
 
 \begin{minted}{postgresql}
     CREATE TABLE people(
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(128),
+        id timestamp PRIMARY KEY,
+        name character varying(128),
     ) PARTITION BY HASH(id);
 
     CREATE TABLE people_0 PARTITION OF people
@@ -558,10 +558,10 @@ definicją kolumn. Np. tabela:
 
 \begin{minted}{postgresql}
     CREATE TABLE people (
-        id SERIAL PRIMARY KEY,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255) NOT NULL,
-        pesel CHAR(11) NULL UNIQUE,
+        id serial PRIMARY KEY,
+        first_name character varying(255) NOT NULL,
+        last_name character varying(255) NOT NULL,
+        pesel character(11) NULL UNIQUE,
         UNIQUE (first_name, last_name)
     );
 \end{minted}
@@ -578,16 +578,16 @@ innej tabeli. Np. dla tabel:
 
 \begin{minted}{postgresql}
     CREATE TABLE people (
-        id SERIAL PRIMARY KEY,
-        first_name VARCHAR(255) NOT NULL,
+        id serial PRIMARY KEY,
+        first_name character varying(255) NOT NULL,
     );
     CREATE TABLE articles (
-        id SERIAL PRIMARY KEY,
+        id serial PRIMARY KEY,
         author_id REFERENCES people NULL ON DELETE SET NULL,
         content TEXT NOT NULL,
     );
     CREATE TABLE comments (
-        id SERIAL PRIMARY KEY,
+        id serial PRIMARY KEY,
         author_id REFERENCES people NOT NULL ON DELETE CASCADE,
         content TEXT NOT NULL,
     );
@@ -613,7 +613,19 @@ Możliwe jest określenie ręczne ograniczeń. Np.
     );
 \end{minted}
 
-\subsection{
+\section{Blokady}
+
+Wykonywane na bazie operacje pozyskują blokady na tabelach lub rzędach. Blokady
+te mogą uniemożliwiać innym sesjom i transakcjom równoczesne wykonanie
+operacjina tym samym obiekcie. Istnieje określona hierarchia blokad, która
+wskazuje jakie blokady wchodzą ze sobą w konflikt. Możliwe jest również ręczne
+pozyskiwanie blokad dla danej transakcji przy pomocy polecenia \texttt{LOCK}.
+
+Istnienie blokad może powodować problem zwany \emph{deadlock}. Zachodzi on
+wtedy, gdy dwie transakcje czekają wzajemnie na zwolnienie blokad, które
+nawzajem blokują. Sytuacje takie wykrywane są obecnie przez PostgreSQL i jedna
+z transakcji jest przerywana. Aby uniknąć takich sytuacji należy dbać o to, aby
+operacje były wykonywane w tej samej kolejności przez wszystkie transakcje.
 
 \chapter{Optymalizacja i utrzymanie bazy}
 
