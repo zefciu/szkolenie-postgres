@@ -1,0 +1,288 @@
+\documentclass{beamer}
+
+\mode<presentation>
+{
+  \usetheme{Berkeley}
+  \usecolortheme{crane}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{polski}
+\usepackage{minted}
+
+% For pygmentize
+\usepackage{fancyvrb}
+\usepackage{color}
+
+%% \input{styles}
+\title{Podstawy SQL i PostgreSQL}
+
+\author[]{Szymon Pyżalski}
+
+\date {}
+\logo {\includegraphics[width=1.5cm]{../../vavatech_logo_small.png}}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage 
+\end{frame}
+
+
+\section{Instalacja postgres}
+\insertsectionhead
+\begin{frame}{Wymagania (prawie) obowiązkowe}
+    \begin{description}
+            \pause
+        \item[readline] dla wygodniejszego \texttt{psql}
+            \pause
+        \item[libz] dla zrzutów bazy
+    \end{description}
+\end{frame}
+
+\begin{frame}{Wymagania nieobowiązkowe}
+    \begin{itemize}
+            \pause
+        \item Języki programowania (Python, Tcl, Perl)
+            \pause
+        \item Narzędzia autoryzacji (Kerberos, LDAP)
+            \pause
+        \item i18n (Gettext)
+            \pause
+        \item Integracje (Systemd)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Utworzenie klastra}
+    \begin{minted}[fontsize=\footnotesize]{shell-session}
+        # export PGDATA=/var/lib/postgresql/10.0/data
+        # adduser --disabled-password postgres
+        # mkdir -p $PGDATA
+        # chmod postgres:postgres $PGDATA
+        $ export PGDATA=/var/lib/postgresql/10.0/data
+        $ initdb -D PGDATA
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Użytkownik postgres}
+    \begin{enumerate}
+            \pause
+        \item Właściciel całego klastra
+            \pause
+        \item Nie powinien być używany do czegokolwiek innego
+            \pause
+        \item Umożliwia logowanie metodą \emph{peer}
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{Uruchomienie serwera niezdemonizowanego}
+    \begin{minted}[fontsize=\footnotesize]{shell-session}
+        $ sudo su postgres
+        $ postgres -D /var/lib/postgresql/10.0/data postgres
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Uruchomienie serwera zdemonizowanego}
+    \begin{minted}[fontsize=\footnotesize]{shell-session}
+        $ export PGDATA=/var/lib/postgresql/10.0/datapostgres -D /var/lib/postgresql/10.0/data
+        $ sudo -Eu postgres pg_ctl start
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Możliwości łączenia się}
+    \begin{enumerate}
+            \pause
+        \item Serwer domyślnie słucha tylko na localhost i tylko stamtąd
+            przyjmuje połączenia
+            \pause
+        \item Aby serwer słuchał na innych adresach używamy parametru
+            \texttt{listen\_addresses}
+            \pause
+        \item Aby serwer przyjmował połączenia spoza localhost używamy pliku
+            \texttt{pg\_hba.conf}
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Typy połączeń}
+    \begin{description}
+            \pause
+        \item[local] Połączenie przez socket unixowy
+            \pause
+        \item[host] Połączenie sieciowe (szyfrowane bądź nie)
+            \pause
+        \item[hostssl] Połączenie sieciowe (szyfrowane)
+            \pause
+        \item[hostnossl] Połączenie sieciowe (nieszyfrowane)
+    \end{description}
+\end{frame}
+
+\begin{frame}{Określenie bazy danych}
+    \begin{description}
+            \pause
+        \item[nazwa] Baza o danej nazwie
+            \pause
+        \item[all] Wszystkie bazy danych
+            \pause
+        \item[sameuser] Baza danych o tej samej nazwie co użytkownik
+            \pause
+        \item[samerole] Baza danych o tej samej nazwie, co jedna z ról użytkownika
+            \pause
+        \item[@nazwapliku] Bazy danych wymienione w pliku \texttt{nazwapliku}
+    \end{description}
+\end{frame}
+
+\begin{frame}{Określenie użytkownika}
+\begin{description}
+    \item[all] Wszyscy użytkownicy
+    \item[nazwa] Użytkownik o danej nazwie
+    \item[+nazwa] Użytkownik należący do danej roli
+    \item[@nazwa pliku] Użytkownik wymieniony w pliku
+\end{description}
+\end{frame}
+
+\begin{frame}{Adres}
+    \begin{itemize}
+            \pause
+        \item Adres IP
+            \pause
+        \item Nazwa domeny
+            \pause
+        \item Określenie \texttt{samehost} lub \texttt{samenet}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Metoda uwierzytelniania}
+    \begin{description}
+            \pause
+    \item[trust] Umożliwia połącznie jako dowolny użytkownik z kolumny USER bez
+        uwierzytelniania
+            \pause
+    \item[peer] Umożliwia połączenie użytkownika, jeśli ma on na lokalnej
+        maszynie tę samą nazwę, co użytkownik bazy. Dostępne tylko dla połączeń
+        przez socketa.
+            \pause
+    \item[password] Uwierzytelnianie przez niezaszyfrowane hasło.
+        \pause
+    \item[scram-sha-256,md5] Uwierzytelnianie przez szyfrowane hasło.
+        \pause
+    \item[gss] Użycie Kerberos do uwierzytelniania.
+        \pause
+    \item[reject] Odrzuć połączenie (umożliwia np. tworzenie czarnej listy
+        hostów)
+    \end{description}
+\end{frame}
+
+
+\section{Zarządzanie użytkownikami}
+\insertsectionhead
+
+\begin{frame}{Rola}
+    \begin{itemize}
+            \pause
+        \item W PostgreSQL koncepcje użytkownika i grupy zunifikowane są do
+            pojęcia roli.
+            \pause
+        \item Role mające uprawnienie \texttt{LOGIN} odpowiadają użytkownikom.
+            \pause
+        \item Role mogą być przypisywane do innych ról, jak do grup i
+            dziedziczyć ich uprawnienia.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Tworzenie ról}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE USER alicja WITH SUPERUSER PASSWORD 'bardzotajne';
+        CREATE ROLE alicja WITH LOGIN SUPERUSER PASSWORD 'bardzotajne';
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Globalne atrybuty roli}
+    \begin{description}
+        \item[SUPERUSER] Rola może obejść wszystkie ograniczenia bazy danych.
+        \item[CREATEDB] Rola może tworzyć bazy danych.
+        \item[CREATEROLE] Rola może tworzyć nowe role.
+        \item[REPLICATION] Rola może być używana przy replikacji.
+    \end{description}
+\end{frame}
+
+\begin{frame}[fragile]{Przypisywanie do ról}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE USER "alicja" WITH PASSWORD 'bardzotajne';
+        CREATE ROLE "admins" WITH CREATEROLE NOINHERIT;
+        CREATE ROLE "creators" WITH CREATEDB;
+        GRANT ROLE "admins" TO "alicja";
+        GRANT ROLE "creators" TO "alicja";
+    \end{minted}
+\end{frame}
+
+\section{Bazy danych}
+\insertsectionhead
+\begin{frame}[fragile]{Przykład tworzenia bazy danych}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE COLLATION "pl_PL.UTF-8" (LOCALE='pl_PL.utf8');
+        CREATE DATABASE "baza" WITH OWNER="alicja" ENCODING="UTF-8"
+        LC_COLLATE="pl_PL.UTF-8" LC_CTYPE="pl_PL.UTF-8" TEMPLATE="template0";
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład tworzenia tabeli}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE TABLE people(
+            id serial PRIMARY KEY,
+            name character varying(255) COLLATE 'pl_PL.UTF-8'
+        );
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład wykorzystania schemy}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE SCHEMA internal;
+        CREATE TABLE users(id serial PRIMARY KEY, name character varying(128));
+        CREATE TABLE internal.logs(id serial PRIMARY KEY, content text);
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład wykorzystania tablespace}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE TABLESPACE critical LOCATION '/mnt/sdc/data' -- dysk SSD
+        CREATE TABLESPACE archive LOCATION '/mnt/sdb/data' -- dysk HDD
+        CREATE TABLE users(id serial PRIMARY KEY, name character varying(128))
+            TABLESPACE critical;
+        CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Partycjonowanie tabel – cz. 1}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE TABLE actions(
+            id serial PRIMARY KEY,
+            content character varying(128),
+            date_performed timestamp,
+        ) PARTITION BY RANGE(action_ts);
+
+        CREATE TABLE actions_archive PARTITION OF actions
+            FOR VALUES FROM (MINVALUE) TO ('2017-12-31')
+            TABLESPACE archive;
+        CREATE TABLE actions_current PARTITION OF actions
+            FOR VALUES FROM ('2018-01-01')
+            TABLESPACE critical;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Partycjonowanie tabel – cz. 1}
+    \begin{minted}[fontsize=\footnotesize]{postgresql}
+        CREATE TABLE people(
+            id timestamp PRIMARY KEY,
+            name character varying(128),
+        ) PARTITION BY HASH(id);
+
+        CREATE TABLE people_0 PARTITION OF people
+            FOR VALUES WITH (MODULUS 2, REMAINDER 0)
+            TABLESPACE disk_0;
+        CREATE TABLE  PARTITION OF people
+            FOR VALUES FROM (MODULUS 2, REMAINDER 1)
+            TABLESPACE disk_1;
+    \end{minted}
+\end{frame}
+\end{document}

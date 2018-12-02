@@ -99,7 +99,7 @@ sposobem uruchomienia jest wywołanie polecenia \texttt{postgres}
 
 \begin{minted}{shell-session}
     $ sudo su postgres
-    $ postgres -D /var/lib/postgresql/10.0/data
+    $ postgres -D /var/lib/postgresql/10.0/data postgres
 \end{minted}
 
 Polecenie to powoduje uruchomienie serwera w wersji niezdemonizowanej, w
@@ -227,7 +227,7 @@ logującego się hasłem możemy użyć następujących poleceń SQL:
 lub też polecenia powłoki
 
 \begin{minted}{shell-session}
-    createuser alicja --pwprompt --superuser
+    $ createuser alicja --pwprompt --superuser
 \end{minted}
 
 Role usuwamy poleceniem \texttt{DROP ROLE}.
