@@ -6,5 +6,6 @@
 *.aux
 *.log
 *.pyg
+*.vrb
 grafik.latex
 _minted-*

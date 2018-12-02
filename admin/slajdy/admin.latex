@@ -55,13 +55,13 @@
 \end{frame}
 
 \begin{frame}[fragile]{Utworzenie klastra}
-    \begin{minted}[fontsize=\footnotesize]{shell-session}
-        # export PGDATA=/var/lib/postgresql/10.0/data
-        # adduser --disabled-password postgres
-        # mkdir -p $PGDATA
-        # chmod postgres:postgres $PGDATA
-        $ export PGDATA=/var/lib/postgresql/10.0/data
-        $ initdb -D PGDATA
+    \begin{minted}[fontsize=\tiny]{shell-session}
+# export PGDATA=/var/lib/postgresql/10.0/data
+# adduser --disabled-password postgres
+# mkdir -p $PGDATA
+# chmod postgres:postgres $PGDATA
+$ export PGDATA=/var/lib/postgresql/10.0/data
+$ initdb -D PGDATA
     \end{minted}
 \end{frame}
 
@@ -77,16 +77,16 @@
 \end{frame}
 
 \begin{frame}[fragile]{Uruchomienie serwera niezdemonizowanego}
-    \begin{minted}[fontsize=\footnotesize]{shell-session}
-        $ sudo su postgres
-        $ postgres -D /var/lib/postgresql/10.0/data postgres
+    \begin{minted}[fontsize=\tiny]{shell-session}
+$ sudo su postgres
+$ postgres -D /var/lib/postgresql/10.0/data postgres
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Uruchomienie serwera zdemonizowanego}
-    \begin{minted}[fontsize=\footnotesize]{shell-session}
-        $ export PGDATA=/var/lib/postgresql/10.0/datapostgres -D /var/lib/postgresql/10.0/data
-        $ sudo -Eu postgres pg_ctl start
+    \begin{minted}[fontsize=\tiny]{shell-session}
+$ export PGDATA=/var/lib/postgresql/10.0/datapostgres -D /var/lib/postgresql/10.0/data
+$ sudo -Eu postgres pg_ctl start
     \end{minted}
 \end{frame}
 
@@ -191,9 +191,9 @@
 \end{frame}
 
 \begin{frame}[fragile]{Tworzenie ról}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE USER alicja WITH SUPERUSER PASSWORD 'bardzotajne';
-        CREATE ROLE alicja WITH LOGIN SUPERUSER PASSWORD 'bardzotajne';
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE USER alicja WITH SUPERUSER PASSWORD 'bardzotajne';
+CREATE ROLE alicja WITH LOGIN SUPERUSER PASSWORD 'bardzotajne';
     \end{minted}
 \end{frame}
 
@@ -207,54 +207,54 @@
 \end{frame}
 
 \begin{frame}[fragile]{Przypisywanie do ról}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE USER "alicja" WITH PASSWORD 'bardzotajne';
-        CREATE ROLE "admins" WITH CREATEROLE NOINHERIT;
-        CREATE ROLE "creators" WITH CREATEDB;
-        GRANT ROLE "admins" TO "alicja";
-        GRANT ROLE "creators" TO "alicja";
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE USER "alicja" WITH PASSWORD 'bardzotajne';
+CREATE ROLE "admins" WITH CREATEROLE NOINHERIT;
+CREATE ROLE "creators" WITH CREATEDB;
+GRANT ROLE "admins" TO "alicja";
+GRANT ROLE "creators" TO "alicja";
     \end{minted}
 \end{frame}
 
 \section{Bazy danych}
 \insertsectionhead
 \begin{frame}[fragile]{Przykład tworzenia bazy danych}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE COLLATION "pl_PL.UTF-8" (LOCALE='pl_PL.utf8');
-        CREATE DATABASE "baza" WITH OWNER="alicja" ENCODING="UTF-8"
-        LC_COLLATE="pl_PL.UTF-8" LC_CTYPE="pl_PL.UTF-8" TEMPLATE="template0";
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE COLLATION "pl_PL.UTF-8" (LOCALE='pl_PL.utf8');
+CREATE DATABASE "baza" WITH OWNER="alicja" ENCODING="UTF-8"
+LC_COLLATE="pl_PL.UTF-8" LC_CTYPE="pl_PL.UTF-8" TEMPLATE="template0";
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Przykład tworzenia tabeli}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE TABLE people(
-            id serial PRIMARY KEY,
-            name character varying(255) COLLATE 'pl_PL.UTF-8'
-        );
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE TABLE people(
+    id serial PRIMARY KEY,
+    name character varying(255) COLLATE 'pl_PL.UTF-8'
+);
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Przykład wykorzystania schemy}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE SCHEMA internal;
-        CREATE TABLE users(id serial PRIMARY KEY, name character varying(128));
-        CREATE TABLE internal.logs(id serial PRIMARY KEY, content text);
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE SCHEMA internal;
+CREATE TABLE users(id serial PRIMARY KEY, name character varying(128));
+CREATE TABLE internal.logs(id serial PRIMARY KEY, content text);
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Przykład wykorzystania tablespace}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
-        CREATE TABLESPACE critical LOCATION '/mnt/sdc/data' -- dysk SSD
-        CREATE TABLESPACE archive LOCATION '/mnt/sdb/data' -- dysk HDD
-        CREATE TABLE users(id serial PRIMARY KEY, name character varying(128))
-            TABLESPACE critical;
-        CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
+    \begin{minted}[fontsize=\tiny]{postgresql}
+CREATE TABLESPACE critical LOCATION '/mnt/sdc/data' -- dysk SSD
+CREATE TABLESPACE archive LOCATION '/mnt/sdb/data' -- dysk HDD
+CREATE TABLE users(id serial PRIMARY KEY, name character varying(128))
+    TABLESPACE critical;
+CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Partycjonowanie tabel – cz. 1}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
+    \begin{minted}[fontsize=\tiny]{postgresql}
         CREATE TABLE actions(
             id serial PRIMARY KEY,
             content character varying(128),
@@ -271,7 +271,7 @@
 \end{frame}
 
 \begin{frame}[fragile]{Partycjonowanie tabel – cz. 1}
-    \begin{minted}[fontsize=\footnotesize]{postgresql}
+    \begin{minted}[fontsize=\tiny]{postgresql}
         CREATE TABLE people(
             id timestamp PRIMARY KEY,
             name character varying(128),
@@ -285,4 +285,162 @@
             TABLESPACE disk_1;
     \end{minted}
 \end{frame}
+\section{Uprawnienia}
+\insertsectionhead
+\begin{frame}{Rodzaje uprawnień}
+\begin{description}
+        \pause
+    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
+        Jest też potrzebne przy zapytaniach \texttt{DELETE} oraz
+        \texttt{UPDATE} jeśli posiadają one jakiekolwiek warunki.
+        \pause
+    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
+        \pause
+    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
+    \item[UPDATE, DELETE, INSERT] Użycie zapytań o tych nazwach na
+        tabeli.
+        \pause
+    \item[REFERENCES] Tworzenie kluczy obcych między danymi kolumnami
+        lub kolumnami w danej tabeli.
+        \pause
+    \item[TRIGGER] Tworzenie wyzwalaczy.
+        \pause
+    \item[CREATE] Tworzenie schemy w danej bazie danych lub tabel w
+        danej schemie.
+        \pause
+    \item[CONNECT] Łączenie się z daną bazą danych (duplikuje funkcjonalność
+        pliku \texttt{pg\_hba.conf}
+        \pause
+    \item[TEMP] Tworzenie tabel tymczasowych
+        \pause
+    \item[EXECUTE] Użycie danej funkcji
+        \pause
+    \item[USAGE] Pisanie procedur w danym języku
+\end{description}
+\end{frame}
+\begin{frame}[fragile}{Nadawanie uprawnień, przykłady}
+\end{frame}
+    \begin{minted}[fontsize=\tiny]{postgresql}
+GRANT INSERT ON logs TO alice;
+GRANT INSERT ON logs TO alice;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA internal TO alice;
+ALTER DEFAULT PRIVILEGES IN SCHEMA internal
+    GRANT SELECT ON TABLES TO alice;
+    \end{minted}
+
+\section{Spójnosć}
+\insertsectionhead
+\begin{frame}{Transakcje}
+    \begin{itemize}
+            \pause
+        \item Transakcja grupuje kilka operacji na bazie danych
+            \pause
+        \item Transakcja może w całości się powieść, lub w całości nie powieść
+            \pause
+        \item Transakcję możemy w dowolnym momencie wycofać
+            (\texttt{ROLLBACK}))
+    \end{itemize}
+
+\begin{frame}{Transakcja – przykład}
+    \begin{minted}[fontsize=\tiny]{shell-session}
+BEGIN;
+UPDATE accounts SET money = money - 100 WHERE username = 'alice';
+UPDATE accounts SET money = money + 100 WHERE username = 'bob';
+END;
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Zjawiska niepożądane}
+\begin{description}
+        \pause
+    \item[Brudny odczyt] odczytywane są dane zapisane w transakcji, która nie
+        została zacommitowana. Sytuacja ta nigdy nie zdarza się w PostgreSQL.
+        \pause
+    \item[Niepowtarzalny odczyt] kilkakrotny odczyt tych samych rzędów w ramach
+        transakcji daje różne dane
+        \pause
+    \item[Odczyt fantomowy] kilkakrotne powtórzenie tego samego filtrowania
+        daje różne rzędy
+        \pause
+    \item[Anomalie serializacyjne] po wykonaniu obu transakcji osiągamy stan,
+        który nie mógłby być uzyskany przez wykonanie tych transakcji jedna po
+        drugiej w dowolnej kolejności
+\end{description}
+\end{frame}
+\begin{frame}{Stopnie izolacji}
+\begin{description}
+        \pause
+    \item[READ COMMITTED] w tym trybie nie widzimy danych, które nie zostały
+        zacommitowane. Możliwe są jednak zmiany danych w czasie transakcji.
+        \pause
+    \item[REPEATABLE READ] w tym trybie dostępny jest dla nas stały stan bazy
+        danych. Zmiany wykonane przez inne transakcje nie mają wpływu na nasze
+        wyszukiwania i na dane, które uzyskujemy.
+        \pause
+    \item[SERIALIZABLE] w tym trybie wszystkie transakcje sumaryczny efekt
+        działania wszystkich transakcji będzie taki sam, jak gdyby transakcje
+        te były wykonane jedna po drugiej. Jeśli to niemożliwe, zostanie
+        wyświetlony błąd i transakcja będzie musiała być cofnięta.
+\end{description}
+\end{frame}
+\begin{frame}{Więzy spójności}
+    \begin{description}
+        \pause
+    \item[NOT NULL] Wartość nie może być null.
+        \pause
+    \item[UNIQUE] Wartość unikatowa (o ile nie NULL), automatyczny indeks
+        \pause
+    \item[PRIMARY KEY] Oba powyższe
+        \pause
+    \item[REFERENCES] Klucz obcy
+        \pause
+    \item[CHECK] Sprawdzenie wartości
+    \end{description}
+\end{frame}
+\end{document}
+\begin{frame}[fragile]{Przykład klucza obcego}
+\begin{minted}[fontsize=\tiny]{shell-session}
+CREATE TABLE people (
+    id serial PRIMARY KEY,
+    first_name character varying(255) NOT NULL,
+);
+CREATE TABLE articles (
+    id serial PRIMARY KEY,
+    author_id REFERENCES people(id) NULL ON DELETE SET NULL,
+    content TEXT NOT NULL,
+);
+CREATE TABLE comments (
+    id serial PRIMARY KEY,
+    author_id REFERENCES people NOT NULL ON DELETE CASCADE,
+    content TEXT NOT NULL,
+);
+\end{minted}
+\end{frame}
+\begin{frame}{Blokady}
+    \begin{itemize}
+            \pause
+        \item Blokady pozyskiwane są dla rzędów i tabel automatycznie przez
+            niektóre operacje
+            \pause
+        \item Możemy ręcznie pozyskać blokadę przy pomocy polecenia
+            \texttt{LOCK}
+            \pause
+        \item Blokady definiowane są przez to, z jakimi innymi blokadami
+            konfliktują
+            \pause
+        \item Deadlock może się pojawić, gdy pozyskujemy blokady w
+            niekonsekwentnej kolejności
+    \end{itemize}
+\end{frame}
+
+\section{Czynności utrzymaniowe}
+\insertsectionhead
+
+\begin{frame}{ANALYZE i VACUUM}
+    \begin{description}
+            \pause
+       \item 
+    \end{description}
+\end{frame}
+
 \end{document}

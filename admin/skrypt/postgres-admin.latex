@@ -492,7 +492,7 @@ sytuacją, w której pieniądze mogłyby przepaść w systemie, lub pojawić si�
 Transakcje możemy w każdej chwili przerwać i cofnąć poleceniem
 \texttt{ROLLBACK}
 
-\section{Izolacja trannsakcji}
+\section{Izolacja transakcji}
 
 O ile transakcje zabezpieczają nas przed sytuacją, w której zostatnie wykonane
 tylko część operacji, istnieją inne zjawiska, które mogą wystąpić nawet w
