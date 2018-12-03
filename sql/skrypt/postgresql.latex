@@ -1,0 +1,455 @@
+\documentclass[openany,twoside]{book}
+\usepackage{layout}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{minted}
+\usepackage{ccicons}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{upquote}
+\begin{document}
+\title{Wprowadzenie do PostgreSQL}
+\author{Szymon Pyżalski}
+
+\maketitle
+
+ \vspace*{\fill}
+ Niniejszy skrypt dostępny jest na licencji\\
+ Creative Commons  Uznanie autorstwa -- Na tych samych warunkach 4.0\\
+ Pewne prawa zastrzeżone.\\
+ \url{https://creativecommons.org/licenses/by-sa/4.0/legalcode.pl}\\
+ \ccbysa
+
+
+\chapter{Wstęp do SQL i PostgreSQL}
+
+\section{Omówienie pojęć}
+PostgreSQL jest relacyjnym systemem bazy danych. Oznacza to, że pozwala on
+zarządzać zbudowanymi według relacyjnego modelu zbiorami danych – 
+pozyskiwać z nich informacje oraz edytować je.
+
+Relacyjny model danych opiera się o koncepcję tabeli zwanej również relacją.
+Tabela taka zawiera rzędy (krotki). Zestaw kolumn jest dla danej tabeli
+zdefiniowany – nazywany jest schematem danej tabeli.
+
+Jeśli chcemy w relacyjnej bazie danych przechowywać bardziej złożone struktury
+niż płaska tabela, musimy je odpowiednio w tym celu przekształcić. Relacyjne
+bazy danych oferują nam w tym celu narzędzia takie jak klucze obce i złączenia.
+
+PostgreSQL jest oprogramowaniem Open Source. Każdy może uzyskać dostęp do kodu
+źródłowego i edytować go.
+
+\section{Łączenie się z bazą danych}
+
+\subsection{psql}
+
+Podstawowym narzędziem do łączenia się z bazą danych jest program
+\texttt{psql}. Jeśli serwer bazy uruchomiony jest na urządzeniu, z którego
+korzystamy i użytkownik oraz baza danych nazywają się tak samo, jak użytkownik
+systemu operacyjnego, możemy połączyć się poleceniem:
+
+\begin{minted}{shell-session}
+    $ psql
+\end{minted}
+
+W innych przypadkach używamy argumentów:
+
+\begin{minted}{shell-session}
+    $ psql -U alicja -h db.example.com our_base
+\end{minted}
+
+Powyższe komenda połączy nas z bazą danych \texttt{our\_base} na serwerze
+\texttt{db.example.com} jako użytkownika \texttt{alicja}.
+
+Narzędzie psql pozwala nam na bezpośrednie wprowadzanie zapytań SQL oferując
+takie ułatwienia jak uzupełnianie składni (tabulator), czy możliwość wyboru
+polecenia z historii (strzałka w górę). Ponadto oferuje nam zestaw poleceń
+spoza SQL zaczynających się od znaku \emph{backslash}. Polecenia te umożliwiają
+nam łatwe odczytanie informacji o bazie danych. Np. \texttt{\\dt} wyświetla
+wszystkie tablice, a \texttt{\\d tablename} wyświetla nam opis danej tabeli. 
+Pełny opis poleceń psql otrzymujemy przy pomocy polecenia \texttt{?}.
+
+\subsection{pgadmin}
+
+Narzędzie pgadmin pozwala nam na graficzny dostęp do bazy danych. Prezentuje
+ono bazę w formie drzewa pozwalając je przeglądać oraz oferuje graficzną
+prezentację wyników wyszukiwań. Obecną wersją aplikacji pgadmin jest pgadmin4,
+który dostępny jest jako aplikacja przeglądarkowa, albo w wersji desktopowej.
+Poprzednia wersja – pgadmin3 dostępna była wyłącznie w formie desktopowej.
+
+\subsection{dostęp programistyczny}
+
+Aby skorzystać z bazy danych z poziomu języka programowania należy skorzystać z
+odpowiedniej biblioteki. Np. w języku Python możemy użyć biblioteki psycopg2.
+
+\begin{minted}{pycon}
+    >>> from psycopg2 import connect
+    >>> connection = connect('dbname=zefciu user=zefciu')
+    >>> cur = connection.cursor()
+    >>> cur.execute('SELECT * FROM notes;')
+    >>> cur.fetchall()
+    [
+        ('Lorem ipsum', 'alicja', 1),
+        ('Dolor sit amet', 'bob', 2),
+        ('Litwo ojczyzno moja', 'charlie', 3)
+    ]
+\end{minted}
+
+\section{Podstawowe polecenia SQL}
+
+Aby szybko rozpocząć pracę z bazą SQL warto nauczyć się poleceń służących do
+odczytu, dodawania, edycji i usuwania rzędów tabel.
+
+\begin{minted}{postgresql}
+    SELECT id, username FROM users;
+\end{minted}
+
+Odczyta wartości kolumn \texttt{id} i \texttt{username} dla całej tabeli
+\texttt{users}.
+
+\begin{minted}{postgresql}
+    INSERT INTO users(username, usertype) VALUES ('Alicja', 'admin');
+\end{minted}
+
+Doda do tabeli \texttt{users} rząd zawierający dla kolumn \texttt{username} i
+\texttt{usertype} wartości odpowiednio „Alicja” i „admin”.
+
+
+\begin{minted}{postgresql}
+    UPDATE users SET usertype='superuser' WHERE username = 'Alicja';
+\end{minted}
+
+Zmieni wartość w kolumnie \texttt{usertype} na „superuser” dla użytkownika lub
+wszystkich użytkowników o \texttt{username} równym „Alicja”.
+
+
+\begin{minted}{postgresql}
+    DELETE FROM users WHERE username = 'Alicja';
+\end{minted}
+
+Usunie z tabeli rząd (rzędy) o wartości \texttt{username} równej „Alicja”.
+
+\chapter{Typy danych w PostgreSQL}
+
+PostgreSQL oferuje nam bardzo dużo wbudowanych typów danych 
+
+\section{Proste typy danych}
+
+Najpopularniejszymi prostymi typami danych są:
+\begin{description}
+    \item[integer] Czterobajtowa liczba całkowita.
+    \item[bigint] Ośmiobajtowa liczba całkowita.
+    \item[double precision] Liczba zmiennoprzecinkowa o podwójnej precyzji
+    \item[decimal] Ułamek dziesiętny
+    \item[serial] Liczba całkowita z autoinkrementacją
+    \item[character varying] Łańcuch znaków o zmiennej, limitowanej długości
+    \item[text] Łańcuch znaków o nielimitowanej długości
+    \item[timestamp] Data i godzina
+    \item[date] Data
+    \item[time] Godzina
+    \item[interval] Odstęp czasowy
+    \item[boolean] Wartość logiczna (\texttt{TRUE} / \texttt{FALSE})
+\end{description}
+
+\section{Funkcje i operatory}
+
+Wbudowane typy oferują nam możliwość używania operatorów oraz funkcji.
+Przykładowe funkcje operujące na wartościach numerycznych to:
+\begin{description}
+    \item[ceil] Zaokrąglenie w górę
+    \item[degrees] Konwersja z radianów na stopnie
+    \item[floor] Zaokrąglenie w dół
+    \item[round] Zaokrąglenie do najbliższej liczby całkowitej
+    \item[sin] Sinus (argument w radianach)
+\end{description}
+
+
+Oprócz funkcji możemy używać też operatorów, z których, poza podstawowymi
+operatorami arytmetycznymi (\texttt{+ - / *}) można wymienić.
+
+\begin{description}
+    \item[@] Wartość absolutna
+    \item[\%] Reszta z dzielenia
+    \item[|/] Pierwiastek kwadratowy
+    \item[||/] Pierwiastek sześcienny
+    \item[\^{}] Potęgowanie
+\end{description}
+
+\section{Złożone typy danych}
+
+
+\section{Klucz główny tabeli}
+
+Każda tabela powinna posiadać klucz główny. Powinno to być pole lub kilka pól,
+które unikalnie identyfikują rząd tabeli. Wyróżniamy klucze naturalne i
+sztuczne. Klucz naturalny
+
+\chapter{Relacje}
+\section{One–to-many}
+Relacja one-to-many to najprostsza z relacji w SQL. Uzyskujemy ją przez
+ustawienie klucza obcego na klucz główny tabeli (tej samej lub innej). W ten
+sposób tworzymy relacje hierarchiczne, w których dany rząd \emph{należy} do
+innego. Np.
+
+\begin{minted}{postgresql}
+    CREATE TABLE users(
+        id serial PRIMARY KEY,
+        username character varying(128)
+    );
+    CREATE TABLE articles(
+        id serial PRIMARY KEY,
+        content text,
+        author_id REFERENCES users(id)
+    );
+\end{minted}
+
+Powyższe tabele połączone są relacją one-to-many. Jeden użytkownik posiadać
+może wiele artykułów, których jest autorem. Aby pobrać tekst artykułu o id=1
+z nazwą autora możemy użyć następującego zapytania:
+
+\begin{minted}{postgresql}
+    SELECT articles.content, users.username FROM articles
+        JOIN users ON articles.author_id = users.id
+        WHERE articles.id = 1;
+\end{minted}
+
+Aby pobrać nazwę użytkownika o id=1 i tekst wszystkich artykułów, które
+napisał, używamy:
+
+\begin{minted}{postgresql}
+    SELECT articles.content, users.username FROM users
+        LEFT JOIN articles ON articles.author_id = users.id
+        WHERE users.id = 1;
+\end{minted}
+
+Użycie \texttt{LEFT JOIN} sprawia, że jeśli użytkownik nie ma artykułów,
+wyświetli się jeden rząd z wartością \texttt{NULL} dla tekstu artykułu.
+
+\section{Many-to-many}
+
+Aby utworzyć relację \emph{many-to-many} potrzebujemy tablicy pośredniej, która
+zawiera klucze obce dla obu tablic (albo dwa klucze do jednej tablicy). W ten
+sposób uzyskujemy relację, w której obie strony mogą posiadać wiele powiązanych
+elementów.
+
+\begin{minted}{postgresql}
+    CREATE TABLE articles(
+        id serial PRIMARY KEY,
+        content text
+    );
+    CREATE TABLE tags(
+        id serial PRIMARY KEY,
+        name character varying(128)
+    );
+    CREATE TABLE articles_tags(
+        article_id integer REFERENCES articles(id),
+        tag_id integer REFERENCES tags(id)
+    );
+\end{minted}
+
+Powyższe tabele tworzą relacje many-to-many. Artykuł może posiadać kilka tagów,
+a jeden tag może być przypisany do wielu artykułów. Aby pobrać artykuł ze
+wszystkimi tagami wykonujemy:
+
+\begin{minted}{postgresql}
+    SELECT articles.content, tags.name FROM articles
+        LEFT JOIN articles_tags ON articles_tags.article_id = articles.id
+        LEFT JOIN tags ON articles_tags.tag_id = tags.id
+        WHERE articles.id = 1;
+\end{minted}
+
+\section{One-to-one i dziedziczenie}
+Relacja one-on-one nie jest często używana. W relacji tej klucz główny dwóch
+tabel jest współdzielony. W relacji tej najczęściej wyrażamy sytuację, w której
+obiekty reprezentowanej w jednej tabeli \emph{są} elementami z drugiej tabeli
+rozszerzonymi o dodatkowe elementy.
+
+\begin{minted}{postgresql}
+    CREATE TABLE places(
+        id serial PRIMARY KEY,
+        address character varying(128)
+    );
+    CREATE TABLE restaurants(
+        id integer PRIMARY KEY REFERENCES places(id),
+        menu text
+    );
+\end{minted}
+
+W powyższych tabelach przechowujemy listę miejsc z ich adresami. Jeśli dane
+miejsce jest restauracją, ma ono wpis również w tabeli \texttt{restaurants},
+gdzie podane jest menu. Aby pobrać wszystkie restauracje z adresem i menu
+wykonujemy:
+
+\begin{minted}{postgresql}
+    SELECT places.address, restaurants.menu FROM places
+        JOIN restaurants ON restaurants.id = places.id;
+\end{minted}
+
+PostgreSQL posiada jednak funkcjonalność pozwalającą na łatwiesze tworzenie
+takich relacji zwaną dziedziczeniem. 
+
+\begin{minted}{postgresql}
+    CREATE TABLE places(
+        id serial PRIMARY KEY,
+        address character varying(128)
+    );
+    CREATE TABLE restaurants(
+        menu text
+    ) INHERITS (places);
+\end{minted}
+
+Przy takiej konfiguracji tabel wszystkie rzędy, które dodajemy do tabeli
+\texttt{restaurants} są też widoczne w widokach tabeli \texttt{place}.
+
+\section{Złączenia}
+
+PostgreSQL pozwala na następujące rodzaje złączeń:
+
+\begin{description}
+    \item[CROSS JOIN] Tworzy wszystkie możliwe kombinacje (iloczyn
+        kartezjański) dwóch tabel.
+    \item[INNER JOIN] Zwraca rzędy, dla których istnieje wpis w obu tablicach.
+    \item[FULL OUTER JOIN] Zwraca rzędy z obu tablic dając wartości
+        \texttt{NULL} tam, gdzie brakuje wartości w drugiej z tabel.
+    \item[LEFT/RIGHT OUTER JOIN] Zwraca wszystkie rzędy z jednej z tabel,
+        natomiast z drugiej tabeli zwraca tylko te, które są powiązane z tymi
+        rzędami. Dla pozostałych zwraca wartość \texttt{NULL}.
+\end{description}
+
+Mimo że w większości przypadków złączeń stosujemy w klauzuli \texttt{ON}
+operator równości, porównując klucze, możliwe jest także stosowanie tzw.
+nierównozłączeń, gdzie stosujemy inne operatory. Np. 
+
+\begin{minted}{postgresql}
+    SELECT name FROM people INNER JOIN people AS peers
+        ON people.age < peers.age;
+\end{minted}
+
+Powyższe zapytanie wyświetli nam wszystkie możliwe pary osób, w których
+pierwsza z osób jest młodsza od drugiej.
+
+\chapter{Zaawansowane wyszukiwania}
+\section{Agregacja}
+Funkcje agregujące pozwalają nam na wyliczenie wartości na podstawie kilku
+rzędów tabeli. Do pupularnych funkcji agregujących należą:
+
+\begin{description}
+    \item[count] Zlicza liczbę rzędów (z argumentem \texttt{*}) lub liczbę
+        rzędów, dla której wartość danej kolumny nie jest \texttt{NULL}
+    \item[avg] Liczy wartość średnią
+    \item[sum] Sumuje wartości
+    \item[max] Podaje wartość maksymalną
+\end{description}
+
+Użycie funkcji agregującej domyślnie powoduje wyświetlenie tylko jednego rzędu
+danych zawierające dane wyliczone dla wszystkich rzędów. Aby podzielić zbiór
+według jakiegoś kryterium stosujemy klauzulę \texttt{GROUP BY}. Np.
+
+\begin{minted}{postgresql}
+SELECT department, subdepartment, count(*), avg(salary) FROM employees
+    GROUP BY (department, subdepartment);
+\end{minted}
+
+Należy zwrócić uwagę, że nie da się umieścić wyników funkcji agregujących w
+klauzuli \texttt{WHERE}. Zamiast tego stosujemy dla nich klauzulę
+\texttt{HAVING}.
+
+\begin{minted}{postgresql}
+SELECT department, subdepartment, count(*), avg(salary) FROM employees
+    GROUP BY (department, subdepartment),
+    HAVING avg(salary) > 3000;
+\end{minted}
+
+Powyższy kod wypisze wszystkie pary departament/subdepartament, liczbę
+pracowników oraz średnie wynagrodzenie dla tych par, gdzie średnie
+wynagrodzenie wynosi więcej niż 3000.
+
+\section{WINDOW}
+
+Funkcje WINDOW pozwalają na wyliczenie wartości na podstawie wielu rzędów
+podobnie jak funkcje agregujące. Nie grupują jednak rzędów. Np. 
+
+\begin{minted}{postgresql}
+SELECT
+    name,
+    salary,
+    avg(salary) OVER (PARTITION BY department) AS dept_salary,
+    avg(salary) OVER (PARTITION BY department, subdepartment) AS subdept_salary
+FROM employees;
+\end{minted}
+Pozwoli na wyświetlenie płac użytkowników na tle średniej płacy dla
+departamentu i subdepartamentu
+
+\section{Operacje na zbiorach}
+
+Słowa kluczowe \texttt{UNION}, \texttt{INTERSECT}, i \texttt{EXCEPT} pozwalają
+łączyć dwa polecenia \texttt{SELECT}, które zwracają rzędy o identycznym typie
+(ta sama długość i te same typy kolumn). Dają one odpowiednio: sumę, część
+wspólną i różnicę obu rezultatów. Mogą być one wykorzystywane do łączenia
+danych z dwóch różnych tabel, a także do usprawnienia niektórych wyszukiwań.
+
+\section{Widoki}
+
+Widoki pozwalają nam na stworzenie swego rodzaju „aliasów” dla złożonych
+zapytań. Np. 
+
+\begin{minted}{postgresql}
+CREATE VIEW salary_vs_average (name, salary, dept_salary, subdept_salary)
+    AS SELECT
+    name,
+    salary,
+    avg(salary) OVER (PARTITION BY department) AS dept_salary,
+    avg(salary) OVER (PARTITION BY department, subdepartment) AS subdept_salary
+FROM employees;
+\end{minted}
+
+Po zdefiniowaniu tego widoku wykonanie:
+
+\begin{minted}{postgresql}
+    SELECT * FROM salary_vs_average WHERE salary > 1000;
+\end{minted}
+
+Powoduje wyświetlenie analogicznych danych do przedstawionych w poprzedniej
+sekcji. Odpowiednio proste widoki mogą też być używane w konstrukcji
+\texttt{INSERT} i \texttt{UPDATE}. Należy zwrócić uwagę, że widoki nie
+zawierają danych, a są jedynie aliasem do zapytania. Wyjątek stanowią
+materializowane widoki.
+
+\chapter{Zagadnienia wydajności}
+
+SQL jest językiem deklaratywnym, co oznacza, że osoba pisząca zapytania
+określa, jaki rezultat chce uzyskać, natomiast system sam stara się ustalić
+najbardziej wydajny sposób wykonania tej operacji. Nie oznacza to jednak że
+użytkownik nie powinien samemu starać się o optymalizację wykonywanych zapytań.
+W celu optymalizacji zapytań dysponujemy pewnymi narzędziami:
+
+\section{EXPLAIN}
+
+Polecenie \texttt{EXPLAIN} pozwala nam zobaczyć plan wykonania danego
+zapytania. Po uruchomieniu tego polecenia otrzymujemy pełen plan wykonania
+danej operacji. Plan ten może obejmować wykorzystanie indeksów, tworzenie
+bitmap, ale również sekwencyjne przeszukiwanie tablicy. Dzięki temu można
+znaleźć elementy zajmujące najwięcej czasu i skupić się na ich optymalizacji.
+
+\section{Priorytety przy optymalizacji}
+
+Aby dokonać optymalizacji zapytania warto zwrócić uwagę na następujące sprawy
+priorytetowe:
+
+\begin{enumerate}
+    \item Czy istnieją indeksy, z których można skorzystać?
+    \item Czy możliwe jest stworzenie jednego indeksu dla danego zapytania?
+    \item Czy zmiana kolejności kolumn w indeksie może zwiększyć wydajność?
+    \item Czy można napisać zapytanie inaczej, tak aby ograniczyć liczbę
+        przeszukiwanych rzędów?
+    \item Czy istniejące podzapytania da się zastąpić przez użycie złączeń lub
+        funkcji \texttt{WINDOW}?
+    \item Czy w przypadku złożonych warunków pracujących na kilku indeksach
+        możliwe jest rozbicie zapytania i użycie \texttt{UNION}?
+    \item Czy można zastosować konstrukt \texttt{WITH}?
+    \item Czy można zastosować materializowane widoki?
+
+\end{enumerate}
+
+\end{document}
+
