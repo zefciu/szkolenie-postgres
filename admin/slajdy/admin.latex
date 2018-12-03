@@ -287,6 +287,7 @@ CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
 \end{frame}
 \section{Uprawnienia}
 \insertsectionhead
+
 \begin{frame}{Rodzaje uprawnień}
 \begin{description}
         \pause
@@ -294,9 +295,6 @@ CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
         Jest też potrzebne przy zapytaniach \texttt{DELETE} oraz
         \texttt{UPDATE} jeśli posiadają one jakiekolwiek warunki.
         \pause
-    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
-        \pause
-    \item[SELECT] Użycie zapytań \texttt{SELECT} na danej tabeli.
     \item[UPDATE, DELETE, INSERT] Użycie zapytań o tych nazwach na
         tabeli.
         \pause
@@ -307,6 +305,11 @@ CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
         \pause
     \item[CREATE] Tworzenie schemy w danej bazie danych lub tabel w
         danej schemie.
+\end{description}
+\end{frame}
+
+\begin{frame}{Rodzaje uprawnień}
+\begin{description}
         \pause
     \item[CONNECT] Łączenie się z daną bazą danych (duplikuje funkcjonalność
         pliku \texttt{pg\_hba.conf}
@@ -318,15 +321,16 @@ CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
     \item[USAGE] Pisanie procedur w danym języku
 \end{description}
 \end{frame}
-\begin{frame}[fragile}{Nadawanie uprawnień, przykłady}
-\end{frame}
+
+\begin{frame}[fragile]{Nadawanie uprawnień, przykłady}
     \begin{minted}[fontsize=\tiny]{postgresql}
 GRANT INSERT ON logs TO alice;
 GRANT INSERT ON logs TO alice;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA internal TO alice;
 ALTER DEFAULT PRIVILEGES IN SCHEMA internal
-    GRANT SELECT ON TABLES TO alice;
+GRANT SELECT ON TABLES TO alice;
     \end{minted}
+\end{frame}
 
 \section{Spójnosć}
 \insertsectionhead
@@ -340,8 +344,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA internal
         \item Transakcję możemy w dowolnym momencie wycofać
             (\texttt{ROLLBACK}))
     \end{itemize}
+\end{frame}
 
-\begin{frame}{Transakcja – przykład}
+\begin{frame}[fragile]{Transakcja – przykład}
     \begin{minted}[fontsize=\tiny]{shell-session}
 BEGIN;
 UPDATE accounts SET money = money - 100 WHERE username = 'alice';
@@ -397,7 +402,7 @@ END;
     \item[CHECK] Sprawdzenie wartości
     \end{description}
 \end{frame}
-\end{document}
+
 \begin{frame}[fragile]{Przykład klucza obcego}
 \begin{minted}[fontsize=\tiny]{shell-session}
 CREATE TABLE people (
@@ -439,8 +444,86 @@ CREATE TABLE comments (
 \begin{frame}{ANALYZE i VACUUM}
     \begin{description}
             \pause
-       \item 
+        \item[ANALYZE] Uaktualnia statystyki tabeli
+            \pause
+        \item[VACUUM] Usuwa martwe rzędy
+            \pause
+        \item[VACUUM FULL] Usuwa martwe rzędy i pozwala na ponowne
+            wykorzystanie miejsca przez system
+        \item[autovacuum] Demon wykonujący automatycznie operacje
+            \texttt{ANALYZE} i \texttt{VACUUM}
     \end{description}
 \end{frame}
 
+\begin{frame}[fragile]{Kopie zapasowe przy użyciu pg\_dump}
+    \begin{minted}[fontsize=\tiny]{shell-session}
+$ pg_dump -U alicja moja_baza > zrzut.sql
+$ psql -U alicja < zrzut.sql
+$ pg_dump -U alicja moja_baza -Fc > zrzut.dump
+$ pg_restore -U alicja -j4 -t mojatablica zrzut.dump
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Pliki WAL}
+    \begin{itemize}
+            \pause
+        \item Pliki WAL wykorzystywane są do utrzymania spójności bazy danych
+            \pause
+        \item Normalnie są usuwane po wykorzystaniu
+            \pause
+        \item Mogą być wykorzystywane do inkrementalnych kopii zapasowych oraz
+            do replikacji
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Inkrementalne kopie zapasowe}
+    \begin{itemize}
+            \pause
+        \item Konfigurujemy bazę danych, by zachowywała pliki WAL
+            \pause
+        \item Tworzymy zrzut plików bazy przy użyciu \texttt{pg\_basebackup}
+            \pause
+        \item Zrzut plików zawiera informację o tym, które pliki WAL muszą być
+            zachowane
+            \pause
+    \end{itemize}
+\end{frame}
+
+\section{HA}
+\insertsectionhead
+
+\begin{frame}{WAL shipping}
+    \begin{itemize}
+            \pause
+        \item Podobny mechanizm jak przy odzyskiwaniu danych
+            \pause
+        \item Hot lub warm standby
+            \pause
+        \item Jeden master
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Replikacja w oparciu o middleware}
+    \begin{itemize}
+            \pause
+        \item Nie skaluje operacji modyfikujących bazę danych
+            \pause
+        \item Proste rozwiązanie bez konfliktów
+            \pause
+        \item Jeden demon odpowiedzialny za load balancing i za replikację
+            danych
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Replikacja logiczna}
+    \begin{itemize}
+            \pause
+        \item Więcej danych w plikach WAL
+            \pause
+        \item Możliwe kilka serwerów master
+            \pause
+        \item Możliwe konflikty i konieczność ich rozwiązywania
+    \end{itemize}
+\end{frame}
 \end{document}
