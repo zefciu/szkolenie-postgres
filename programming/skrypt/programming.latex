@@ -156,7 +156,7 @@ jest wówczas, dopóki wyrażenie jest spełnione.
 
 \begin{minted}{postgresql}
     WHILE amount > 0 LOOP
-        decreate_value(amount);
+        decrease_value(amount);
     END LOOP;
 \end{minted}
 

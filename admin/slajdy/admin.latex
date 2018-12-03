@@ -16,7 +16,7 @@
 \usepackage{color}
 
 %% \input{styles}
-\title{Podstawy SQL i PostgreSQL}
+\title{Administracja serwera PostgreSQL}
 
 \author[]{Szymon Pyżalski}
 
