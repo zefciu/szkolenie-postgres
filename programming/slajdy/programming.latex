@@ -57,9 +57,19 @@
     DECLARE
         amount integer;
         name character varying(128);
+        arg anyelement;
         name users.username%TYPE;
         result users%ROWTYPE;
         some_record RECORD;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Konwersja typów}
+    \begin{minted}[fontsize=\tiny]{postgresql}
+    DECLARE
+        'Lorem ipsum'::character varying;
+        1::double precision;
+        'integer'::regtype;
 \end{minted}
 \end{frame}
 
@@ -161,6 +171,18 @@
 
     $$ LANGUAGE plpgsql;
 \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Security definer}
+    \begin{itemize}
+            \pause
+        \item Dodanie do funkcji słów \texttt{SECURITY DEFINER} powoduje, że
+            funkcja wywołuje się z uprawnieniami użytkownika, który ją napisał
+            \pause
+    \item \texttt{current\_user} również wskazuje na tego użytkownika
+            \pause
+    \item Aby pobrać rzeczywistego użytkownika używamy \texttt{session\_user}
+    \end{itemize}
 \end{frame}
 
 \section{Komunikacja z bazą danych}
