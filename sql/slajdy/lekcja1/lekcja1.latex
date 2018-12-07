@@ -1,0 +1,231 @@
+\documentclass{beamer}
+
+\mode<presentation>
+{
+  \usetheme{Berkeley}
+  \usecolortheme{crane}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{polski}
+\usepackage{dot2texi}
+
+% For pygmentize
+\usepackage{fancyvrb}
+\usepackage{color}
+
+%% \input{styles}
+\title{Podstawy SQL i PostgreSQL}
+
+\author[]{Szymon Pyżalski}
+
+\date {}
+\logo {\includegraphics[width=1.5cm]{../../vavatech_logo_small.png}}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage 
+\end{frame}
+
+\section{Relacyjne bazy danych}
+\insertsectionhead
+\begin{frame}{Podstawowe pojęcia}
+    \begin{description}
+        \pause
+    \item[baza danych]
+        Zorganizowany zbiór danych przechowywany elektronicznie
+            \pause
+    \item[DBMS]
+       System oprogramowania zarządzający bazą danych, umożliwiający dostęp do
+            nich.
+            \pause
+    \item[relacyjna baza danych]
+        Baza danych oparta o model relacyjny
+        \pause
+    \item[SQL]
+        Język używany do interakcji z relacyjnymi bazami danych
+    \end{description}
+\end{frame}
+
+\begin{frame}{Tabela w relacyjnej bazie danych}
+    \begin{tabular}{| r | l | l | r | r |}
+        \hline
+        \textbf{id} & \textbf{first\_name} & \textbf{last\_name} & \textbf{age}
+        & \textbf{responds\_to} \\
+        \hline
+        1 & Shaddam & Corrino & 57 & NULL\\
+        \hline
+        2 & Leto & Atreides & 51 & 1\\
+        \hline
+        3 & Paul & Atreides & 15 & 2\\
+        \hline
+        4 & Vladimir & Harkonnen & 81 & 1\\
+        \hline
+        5 & Gurney & Halleck & 56 & 2\\
+        \hline
+        6 & Piter & de Vries & 53 & 4\\
+        \hline
+    \end{tabular}
+\end{frame}
+
+\begin{frame}{Język SQL}
+    \begin{itemize}
+        \pause
+    \item Praktyczny monopolista w dziedzinie baz relacyjnych
+        \pause
+    \item Oparty o język angielski
+        \pause
+    \item Język deklaratywny
+        \pause
+    \end{description}
+\end{frame}
+
+\begin{frame}[fragile]{Język SQL}
+    \begin{minted}{postgresql}
+        SELECT first_name, last_name FROM people WHERE country='Poland';
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Trochę historii}
+    \begin{itemize}
+        \pause
+    \item W 1970 powstaje koncepcja relacyjnej bazy danych (Edgar F. Codd z
+        IBM)
+            \pause
+    \item W 1979 powstaje pierwszy komercyjnie dostępny system oparty o SQL –
+        Oracle
+            \pause
+    \item Projekt Postgres (post Ingres) rozpoczął się na Uniwersytecie
+        Berkeley w 1985 roku. W 1994 został opublikowany jako Open Source
+            \pause
+    \item W 1995 roku opublikowany zostaje Postgres z językiem SQL –
+        PostgreSQL.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Pryncypia ACID}
+    \begin{description}
+        \pause
+    \item[atomowość] Transakcje albo w całości się powodzą, albo w całości nie
+        powodzą.
+        \pause
+    \item[spójność] Baza danych po każdej transakcji jest zawsze w stanie integralnym
+        \pause
+    \item[izolacja] Niezakończone transakcje nie oddziałują między sobą
+        \pause
+    \item[trwałość] Dane zapisane w transakcji pozostają w bazie danych
+    \end{description}
+\end{frame}
+
+\begin{frame}{Struktura PostgreSQL}
+    \begin{description}
+        \pause
+    \item[klaster] Zbiór baz danych na dysku
+        \pause
+    \item[serwer] Operuje na klastrze, dba o spójność danych, uwierzytelnianie
+        etc.
+        \pause
+    \item[klient] Klienci łączą się z serwerem i komunikują z nim w języku SQL
+        \pause
+    \end{description}
+\end{frame}
+
+\section{Podstawowe komenty SQL}
+\insertsectionhead
+
+\begin{frame}[fragile]{Utworzenie tabeli}
+    \begin{minted}{postgresql}
+        CREATE TABLE people(
+            id serial PRIMARY KEY,
+            name character varying,
+            age integer,
+            registered timestamp
+        );
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Dodanie danych do tabeli}
+    \begin{minted}{postgresql}
+        INSERT INTO people(name, age, registered) VALUES (
+            'Leto Atreides', 51, now()
+        );
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Pobranie danych z tabeli}
+    \begin{minted}{postgresql}
+        SELECT name, age FROM people WHERE age > 50;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Usuwanie danych z tabeli}
+    \begin{minted}{postgresql}
+        DELETE FROM people WHERE age > 50;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Usuwanie danych z tabeli}
+    \begin{minted}{postgresql}
+        UPDATE people SET name='Muad''Dib' WHERE name='Paul Atreides';
+    \end{minted}
+\end{frame}
+
+\section{Typy danych}
+\insertsectionhead
+
+\subsection{Proste typy danych}
+\begin{frame}{Typy liczbowe}
+    \begin{description}
+            \pause
+        \item[integer] Czterobajtowa liczba całkowita (-2.147.483.648 – 
+            2.147.483.647)
+            \pause
+        \item[bigint] Ośmiobajtowa liczba całkowita (
+            -9.223.372.036.854.775.808 – 9.223.372.036.854.775.807)
+            \pause
+        \item[serial, bigserial] Liczba całkowita z autoinkrementacją
+            \pause
+        \item[real, double precision] Liczba zmiennoprzecinkowa
+            \pause
+        \item[decimal] Ułamek dziesiętny
+    \end{description}
+\end{frame}
+
+\begin{frame}{Znaki}
+    \begin{description}
+            \pause
+        \item[character] Łańcuch znaków o stałej długości
+            \pause
+        \item[character varying] Łańcuch znaków o zmiennej, limitowanej długości
+            \pause
+        \item[text] Łańcuch znaków o nielimitowanej długości
+    \end{description}
+\end{frame}
+
+\begin{frame}{Data i godzina}
+    \begin{description}
+            \pause
+        \item[timestamp] Data i godzina
+            \pause
+        \item[date] Data
+            \pause
+        \item[time] Godzina
+            \pause
+        \item[interval] Odstęp czasowy
+    \end{description}
+\end{frame}
+
+\begin{frame}{Inne}
+    \begin{description}
+            \pause
+        \item[boolean] Prawda lub fałsz
+            \pause
+        \item[cidr, inet, macaddr] Prawda lub fałsz
+            \pause
+        \item[uuid] Unikalny identyfikator
+    \end{description}
+\end{frame}
+
+\end{document}

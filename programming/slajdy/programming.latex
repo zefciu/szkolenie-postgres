@@ -187,6 +187,18 @@
 
 \section{Komunikacja z bazą danych}
 
+\begin{frame}[fragile]{Dynamiczne wywoływanie}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    EXECUTE format(
+        'SELECT subject, content FROM %I WHERE id=$1;'
+        tabname
+    )
+    INTO article_subject, article_content
+    USING article_id
+    ;
+\end{minted}
+\end{frame}
+
 \begin{frame}[fragile]{Deklarowanie kursorów}
 \begin{minted}[fontsize=\tiny]{postgresql}
     DECLARE

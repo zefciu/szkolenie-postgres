@@ -60,8 +60,9 @@
 # adduser --disabled-password postgres
 # mkdir -p $PGDATA
 # chmod postgres:postgres $PGDATA
+# su postgres
 $ export PGDATA=/var/lib/postgresql/10.0/data
-$ initdb -D PGDATA
+$ initdb -D $PGDATA
     \end{minted}
 \end{frame}
 
@@ -259,13 +260,13 @@ CREATE TABLE logs(id serial PRIMARY KEY, content TEXT) TABLESPACE archive;
             id serial PRIMARY KEY,
             content character varying(128),
             date_performed timestamp,
-        ) PARTITION BY RANGE(action_ts);
+        ) PARTITION BY RANGE(date_performed);
 
         CREATE TABLE actions_archive PARTITION OF actions
             FOR VALUES FROM (MINVALUE) TO ('2017-12-31')
             TABLESPACE archive;
         CREATE TABLE actions_current PARTITION OF actions
-            FOR VALUES FROM ('2018-01-01')
+            FOR VALUES FROM ('2018-01-01') TO (MAXVALUE)
             TABLESPACE critical;
     \end{minted}
 \end{frame}
@@ -404,20 +405,20 @@ END;
 \end{frame}
 
 \begin{frame}[fragile]{Przykład klucza obcego}
-\begin{minted}[fontsize=\tiny]{shell-session}
+\begin{minted}[fontsize=\tiny]{postgresql}
 CREATE TABLE people (
     id serial PRIMARY KEY,
-    first_name character varying(255) NOT NULL,
+    first_name character varying(255) NOT NULL
 );
 CREATE TABLE articles (
     id serial PRIMARY KEY,
     author_id REFERENCES people(id) NULL ON DELETE SET NULL,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL
 );
 CREATE TABLE comments (
     id serial PRIMARY KEY,
     author_id REFERENCES people NOT NULL ON DELETE CASCADE,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL
 );
 \end{minted}
 \end{frame}
