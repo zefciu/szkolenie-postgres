@@ -9,7 +9,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{polski}
-\usepackage{dot2texi}
+\usepackage{minted}
+\usepackage{tipa}
 
 % For pygmentize
 \usepackage{fancyvrb}
@@ -21,7 +22,7 @@
 \author[]{Szymon Pyżalski}
 
 \date {}
-\logo {\includegraphics[width=1.5cm]{../../vavatech_logo_small.png}}
+\logo {\includegraphics[width=1.5cm]{../../../vavatech_logo_small.png}}
 
 \begin{document}
 
@@ -78,13 +79,13 @@
     \item Oparty o język angielski
         \pause
     \item Język deklaratywny
-        \pause
-    \end{description}
+    \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Język SQL}
     \begin{minted}{postgresql}
-        SELECT first_name, last_name FROM people WHERE country='Poland';
+SELECT first_name, last_name FROM people
+    WHERE country='Poland';
     \end{minted}
 \end{frame}
 
@@ -128,7 +129,6 @@
         etc.
         \pause
     \item[klient] Klienci łączą się z serwerem i komunikują z nim w języku SQL
-        \pause
     \end{description}
 \end{frame}
 
@@ -137,18 +137,20 @@
 
 \begin{frame}[fragile]{Utworzenie tabeli}
     \begin{minted}{postgresql}
-        CREATE TABLE people(
+        CREATE TABLE osoby(
             id serial PRIMARY KEY,
-            name character varying,
-            age integer,
-            registered timestamp
+            imie_nazwisko character varying,
+            wiek integer,
+            zarejestrowany timestamp
         );
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Dodanie danych do tabeli}
     \begin{minted}{postgresql}
-        INSERT INTO people(name, age, registered) VALUES (
+        INSERT INTO osoby(
+            imie_nazwisko, wiek, zarejestrowany
+        ) VALUES (
             'Leto Atreides', 51, now()
         );
     \end{minted}
@@ -156,19 +158,21 @@
 
 \begin{frame}[fragile]{Pobranie danych z tabeli}
     \begin{minted}{postgresql}
-        SELECT name, age FROM people WHERE age > 50;
+SELECT imie_nazwisko, wiek FROM osoby
+    WHERE wiek > 50;
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Usuwanie danych z tabeli}
     \begin{minted}{postgresql}
-        DELETE FROM people WHERE age > 50;
+DELETE FROM osoby WHERE wiek > 50;
     \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Usuwanie danych z tabeli}
     \begin{minted}{postgresql}
-        UPDATE people SET name='Muad''Dib' WHERE name='Paul Atreides';
+UPDATE osoby SET imie_nazwisko='Muad''Dib'
+    WHERE imie_nazwisko='Paul Atreides';
     \end{minted}
 \end{frame}
 
@@ -217,14 +221,171 @@
     \end{description}
 \end{frame}
 
+\begin{frame}{NULL}
+    \begin{itemize}
+            \pause
+        \item Reprezentuje „brak wartości” albo „nie ma zastosowania”
+            \pause
+        \item Aby wyszukać używamy \texttt{IS NULL}
+            \pause
+        \item Nie podlega normalnym porównaniom
+            \pause
+        \item Może być dowolnego typu, jeśli nie zabronimy przez (\texttt{NOT NULL})
+    \end{itemize}
+\end{frame}
+
 \begin{frame}{Inne}
     \begin{description}
             \pause
         \item[boolean] Prawda lub fałsz
             \pause
-        \item[cidr, inet, macaddr] Prawda lub fałsz
+        \item[inet, cidr, macaddr] Adresy urządzeń i sieci
             \pause
         \item[uuid] Unikalny identyfikator
+            \pause
+        \item[xml] Prawidłowy XML
+    \end{description}
+\end{frame}
+
+\subsection{Własne typy danych}
+\begin{frame}[fragile]{enum}
+    \begin{minted}{postgresql}
+        CREATE TYPE ocena AS ENUM(
+            'bardzo zadowolony',
+            'zadowolony',
+            'neutralna',
+            'niezadowolony',
+            'bardzo niezadowolony'
+        );
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{typy złożone}
+    \begin{minted}{postgresql}
+        CREATE TYPE produkt AS (
+            nazwa character varying(128),
+            ean character(13)
+        );
+    \end{minted}
+\end{frame}
+
+\subsection{Typy dla rzadkich danych}
+
+\begin{frame}[fragile]{Format JSON}
+    \begin{minted}{json}
+        {
+            "imie": "Shaddam",
+            "nazwisko": "Corrino",
+            "wiek": 57,
+            "imperator": true,
+            "dzieci": [
+                "Irulan",
+                "Chalice",
+                "Wensicia",
+                "Josifa",
+                "Rugi"
+            ],
+            "żona" null
+        }
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Typy dla rzadkich danych}
+    \begin{description}
+            \pause
+        \item[json]Przechowuje tekst JSON tak jak jest on wprowadzony. Mało
+            wydajny.
+            \pause
+        \item[jsonb]Przechowuje dane JSON w postaci binarnej. Bardzo wydajny,
+            mnóstwo funkcji i operatorów.
+            \pause
+        \item[hstore]Starsze rozwiązanie. Dla nowych baz używajmy
+            \texttt{jsonb}.
+    \end{description}
+\end{frame}
+
+\subsection{Operatory i funkcje}
+\begin{frame}{Operatory na liczbach}
+    \begin{description}
+            \pause
+        \item[+ - * /]Arytmetyka
+            \pause
+        \item[\textless \textgreater \textless= \textgreater= = !=]Porównanie
+            \pause
+        \item[\^{}]Potęga
+            \pause
+        \item[\%]Reszta z dzielenia
+            \pause
+        \item[\textpipe/]Pierwiastek kwadratowy
+            \pause
+        \item[@]Wartość absolutna
+    \end{description}
+\end{frame}
+
+\begin{frame}{Funkcje liczbowe}
+    \begin{description}
+            \pause
+        \item[round]Zaokrąglenie
+            \pause
+        \item[ceil, floor]Zaokrąglenie w górę/dół
+            \pause
+        \item[\^{}]Potęga
+            \pause
+        \item[sin cos…]Trygonometria (argument w radianach)
+            \pause
+        \item[radians degrees]Konwersja
+            \pause
+        \item[random]Losowa wartość 0 – 1
+    \end{description}
+\end{frame}
+
+\begin{frame}{Operatory logiczne}
+    \begin{itemize}
+            \pause
+        \item Operator \texttt{AND}, \texttt{OR} oraz \texttt{NOT}
+            \pause
+        \item Logika trójwartościowa \texttt{NULL} traktowane jako „nie
+            wiadomo”.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Operatory na łańcuchach}
+    \begin{description}
+            \pause
+        \item[\textpipe\textpipe]Połączenie dwóch łańcuchów
+            \pause
+        \item[LIKE]Porównywanie do wzorca
+            \pause
+        \item[SIMILAR TO]Porównanie do wyrażeń regularnych
+            \pause
+    \end{description}
+\end{frame}
+
+\begin{frame}{Funkcje na łańcuchach}
+    \begin{description}
+            \pause
+        \item[trim]Obcięcie białych znaków
+            \pause
+        \item[LIKE]Porównywanie do wzorca
+            \pause
+        \item[SIMILAR TO]Porównanie do wyrażeń regularnych
+            \pause
+    \end{description}
+\end{frame}
+
+\begin{frame}{Operatory na jsonb}
+    \begin{description}
+            \pause
+        \item[-\textgreater]Wyciągnij element po kluczu
+            \pause
+        \item[-\textgreater\textgreater]Wyciągnij element po kluczu jako text
+            \pause
+        \item[?]Czy jest taki klucz?
+            \pause
+        \item[-]Usuń klucz
+            \pause
+        \item[\textpipe\textpipe]Połącz obiekty
+            \pause
     \end{description}
 \end{frame}
 
