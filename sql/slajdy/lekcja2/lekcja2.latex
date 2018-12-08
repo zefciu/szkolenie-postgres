@@ -1,0 +1,265 @@
+\documentclass{beamer}
+
+\mode<presentation>
+{
+  \usetheme{Berkeley}
+  \usecolortheme{crane}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{polski}
+\usepackage{minted}
+\usepackage{tipa}
+
+\title{Relacje, złączenia i zaawansowane operacje PostgreSQL}
+\date {}
+\logo {\includegraphics[width=1.5cm]{../../../vavatech_logo_small.png}}
+\begin{document}
+
+\begin{frame}
+  \titlepage 
+\end{frame}
+
+\section{Relacje między tabelami}
+\begin{frame}
+\insertsectionhead
+\end{frame}
+
+\begin{frame}{One-to-many}
+    \begin{itemize}
+            \pause
+        \item Najprostsza w implementacji
+            \pause
+        \item Używamy klucza obcego w jednej tabeli
+            \pause
+        \item Relacja hierarchiczna. Rząd w jednej tabeli należy do jednego
+            rzędu w drugiej (albo do żadnego).
+            \pause
+        \item W przypadku użycia jednej tabeli otrzymujemy drzewo.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{One-to-many przykład}
+\begin{minted}{postgresql}
+CREATE TABLE rody(
+    id serial PRIMARY KEY,
+    nazwa character varying(128)
+);
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    rod_id integer NOT NULL REFERENCES rody
+);
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{One-to-many przykład}
+\begin{minted}{postgresql}
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    zwierzchnik_id integer REFERENCES osoby
+);
+\end{minted}
+\end{frame}
+
+\begin{frame}{Many-to-many}
+    \begin{itemize}
+            \pause
+        \item Potrzebna jest pośrednia tabela
+            \pause
+        \item Złożenie dwóch relacji One-to-many
+            \pause
+        \item Relacja pozwala na dowolną liczbę po obu stronach relacji
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Many-to-many przykład}
+\begin{minted}{postgresql}
+CREATE TABLE organizacje(
+    id serial PRIMARY KEY,
+    nazwa character varying(128)
+);
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    rod_id integer NOT NULL REFERENCES rody
+);
+CREATE TABLE przynaleznosc(
+    organizacja_id integer REFERENCES organizacje,
+    osoba_id integer REFERENCES osoby,
+    PRIMARY KEY (organizacja_id, osoba_id)
+);
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Many-to-many przykład}
+\begin{minted}{postgresql}
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    rod_id integer NOT NULL REFERENCES rody
+);
+CREATE TABLE przyjaznie(
+    osoba1_id integer REFERENCES osoby,
+    osoba2_id integer REFERENCES osoby,
+    PRIMARY KEY (osoba1_id, osoba2_id)
+);
+\end{minted}
+\end{frame}
+
+\begin{frame}{One-to-one}
+    \begin{itemize}
+            \pause
+        \item Rzadko stosowana
+            \pause
+        \item Współdzielony klucz główny
+            \pause
+        \item Wyraża relację „a jest b” (dziedziczenie)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{One-to-one przykład}
+\begin{minted}{postgresql}
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    rod_id integer NOT NULL REFERENCES rody
+);
+CREATE TABLE bene_gesserit(
+    id integer PRIMARY KEY REFERENCES osoby(id),
+    ranga character varying(128)
+);
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Dziedziczenie}
+\begin{minted}{postgresql}
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    nazwisko character varying(128),
+    rod_id integer NOT NULL REFERENCES rody
+);
+CREATE TABLE bene_gesserit(
+    ranga character varying(128)
+) INHERITS (osoby);
+\end{minted}
+\end{frame}
+
+\section{Złączenia}
+\begin{frame}
+\insertsectionhead
+\end{frame}
+
+\begin{frame}[fragile]{CROSS JOIN}
+    \begin{minted}{postgresql}
+SELECT skrzydla.name, pietra.numer
+    FROM skrzydla CROSS JOIN pietra;
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Równozłączenia}
+    \begin{description}
+            \pause
+        \item[INNER JOIN] Zwraca rzędy, dla których istnieje wpis w obu tablicach.
+            \pause
+        \item[FULL OUTER JOIN] Zwraca rzędy z obu tablic dając wartości
+            \texttt{NULL} tam, gdzie brakuje wartości w drugiej z tabel.
+            \pause
+        \item[LEFT/RIGHT OUTER JOIN] Zwraca wszystkie rzędy z jednej z tabel,
+            natomiast z drugiej tabeli zwraca tylko te, które są powiązane z tymi
+            rzędami. Dla pozostałych zwraca wartość \texttt{NULL}.
+   \end{description}
+\end{frame}
+
+\begin{frame}[fragile]{Równozłączenia}
+    \begin{minted}{postgresql}
+SELECT osoby.imie, przyjaciele.imie
+    FROM osoby
+    INNER JOIN przyjaznie
+        ON przyjaznie.osoba1_id = osoby.id
+    INNER JOIN osoby AS przyjaciele
+        ON przyjaciele.id = przyjaznie.osoba2_id;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{NATURAL JOIN}
+    \begin{itemize}
+    \pause
+    \item Automatyczne złączenie na podstawie nazw kolumn.
+    \pause
+    \item Nieprzewidywalne zachowanie. Nie używamy.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Nierównozłączenia}
+    \begin{minted}{postgresql}
+SELECT studenci.imie, kursy.nazwa
+    FROM studenci INNER JOIN kursy
+        ON studenci.ocena > kursy.prog;
+    \end{minted}
+\end{frame}
+
+\section{Zapytania zaawansowane}
+\begin{frame}
+\insertsectionhead
+\end{frame}
+
+\begin{frame}[fragile]{Agregacja danych}
+    \begin{minted}{postgresql}
+SELECT sum(pensja) FROM pracownicy
+    WHERE wydzial != 'Geografia'
+    GROUP BY (wydzial, zespol)
+    HAVING sum(pensja) > 10000;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Funkcje window}
+    \begin{minted}{postgresql}
+SELECT 
+    imie,
+    pensja,
+    avg(pensja) OVER (PARTITION BY wydzial)
+        AS sr_pensja_wydzial
+    avg(pensja) OVER (PARTITION BY wydzial, zespol)
+        AS sr_pensja_zespol
+    FROM pracownicy;
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Operacje na zbiorach}
+    \begin{description}
+            \pause
+        \item[UNION] Połączenie dwóch źródeł
+            \pause
+        \item[INTERSECT] Część wspólna zbiorów
+            \pause
+        \item[EXCEPT] Różnica zbiorów
+    \end{description}
+\end{frame}
+
+\begin{frame}[fragile]{Złączenia rekursywne}
+    \begin{minted}{postgresql}
+WITH RECURSIVE obecna_osoba(imie, szef_id) AS (
+    SELECT imie, szef_id FROM osoby
+        WHERE imie='Stilgar'
+    UNION
+        SELECT osoby.imie, osoby.szef_id
+            FROM osoby
+            INNER JOIN obecna_osoba
+                ON id=obecna_osoba.szef_id
+    )
+    SELECT * FROM obecna_osoba;
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Tworzenie widoków}
+    \begin{minted}{postgresql}
+CREATE VIEW szefowie AS
+    SELECT imie, stanowisko FROM
+        osoby WHERE statnowisko IN ('kierownik', 'manager');
+    \end{minted}
+\end{frame}
+
+\end{document}

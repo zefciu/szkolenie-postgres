@@ -16,7 +16,6 @@
 \usepackage{fancyvrb}
 \usepackage{color}
 
-%% \input{styles}
 \title{Podstawy SQL i PostgreSQL}
 
 \author[]{Szymon Pyżalski}
