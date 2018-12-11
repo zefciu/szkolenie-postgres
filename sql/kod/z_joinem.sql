@@ -1,0 +1,1 @@
+EXPLAIN ANALYZE SELECT pracownicy.imie, pracownicy.nazwisko, obecny_rok.rank FROM grades obecny_rok INNER JOIN pracownicy ON pracownicy.id = obecny_rok.pracownik_id INNER JOIN grades zeszly_rok ON obecny_rok.pracownik_id = zeszly_rok.pracownik_id AND zeszly_rok.rok=2017 WHERE obecny_rok.rok = 2018 AND obecny_rok.rank > zeszly_rok.rank;

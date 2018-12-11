@@ -228,6 +228,20 @@ SELECT
     \end{minted}
 \end{frame}
 
+\begin{frame}[fragile]{Wyrażenie warunkowe}
+    \begin{minted}{postgresql}
+SELECT
+    SUM(
+       CASE osoby.plec
+            WHEN 'kobieta'
+                THEN 1
+            ELSE 0
+       END
+    )::numeric / COUNT(osoby.id)
+FROM osoby;
+    \end{minted}
+\end{frame}
+
 \begin{frame}{Operacje na zbiorach}
     \begin{description}
             \pause
@@ -237,6 +251,24 @@ SELECT
             \pause
         \item[EXCEPT] Różnica zbiorów
     \end{description}
+\end{frame}
+
+\begin{frame}[fragile]{CTE}
+    \begin{minted}{postgresql}
+WITH relacja AS (
+    SELECT
+        osoba1.imie AS osoba1,
+        osoba2.imie AS osoba2
+    FROM osoby AS osoba1
+    INNER JOIN przyjaznie
+        ON osoba1.id = przyjaznie.osoba1_id
+    INNER JOIN osoby AS osoba2
+        ON osoba2.id = przyjaznie.osoba2_id
+)
+    SELECT osoba1, osoba2 FROM relacja
+    UNION
+    SELECT osoba2, osoba1 FROM relacja;
+    \end{minted}
 \end{frame}
 
 \begin{frame}[fragile]{Złączenia rekursywne}
@@ -258,7 +290,9 @@ WITH RECURSIVE obecna_osoba(imie, szef_id) AS (
     \begin{minted}{postgresql}
 CREATE VIEW szefowie AS
     SELECT imie, stanowisko FROM
-        osoby WHERE statnowisko IN ('kierownik', 'manager');
+        osoby WHERE statnowisko IN (
+            'kierownik', 'manager'
+        );
     \end{minted}
 \end{frame}
 

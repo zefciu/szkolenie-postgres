@@ -1,0 +1,283 @@
+\documentclass{beamer}
+
+\mode<presentation>
+{
+  \usetheme{Berkeley}
+  \usecolortheme{crane}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{polski}
+\usepackage{minted}
+\usepackage{tipa}
+
+\title{Wydajność PostgreSQL i wprowadzenie do PL/pgSQL}
+\date {}
+\logo {\includegraphics[width=1.5cm]{../../../vavatech_logo_small.png}}
+\begin{document}
+
+\begin{frame}
+  \titlepage 
+\end{frame}
+
+\section{Indeksy}
+\begin{frame}{Czym jest indeks}
+    \begin{itemize}
+            \pause
+        \item Zwiększa wydajność zapytań
+            \pause
+        \item Niektóre automatycznie tworzone przez bazę
+            \pause
+        \item Możliwość ręcznego tworzenia
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Działanie planera}
+    \begin{itemize}
+            \pause
+        \item Czy istnieją indeksy?
+            \pause
+        \item Jakie są statystyki tabel?
+            \pause
+        \item Jakie będą koszty użycia konkretnych strategii?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Badanie działania planera}
+    \begin{description}
+            \pause
+        \item[EXPLAIN] Przedstawia plan wykonania zapytania i wyświetla koszty
+            w umownej jednostce
+            \pause
+        \item[EXPLAIN ANALYZE] Wykonuje rzeczywiście plan zapytania i podaje
+            rzeczywisty czas w ms.
+            \pause
+        \item[SET enable\_seqscan = OFF] Pomaga ustalić, czy planer nie może
+            użyć indeksu, czy postanowił go nie używać
+    \end{description}
+\end{frame}
+
+\begin{frame}{Przykładowe strategie}
+    \begin{description}
+            \pause
+        \item[Seq scan] Przeszukanie tabeli rząd po rzędzie. Pojedynczy odczyt
+            jest \emph{tańszy} niż przy indeksie, ale skaluje się liniowo.
+            \pause
+        \item[Index scan] Przeszukanie indeksu w celu znalezienia pasujących
+            stron
+            \pause
+        \item[Bitmap heap scan] Odczytanie danych wyszukanych z indeksu i ich
+            posortowanie. Wymaga ponownego sprawdzenia warunku
+            \pause
+        \item[BitmapAnd BitmapOr] Połączenie wyników dwóch skanów przy pomocy
+            operacji bitowych.
+            \pause
+        \item[Nested loop] Wykonanie JOIN-a poprzez zagnieżdżoną pętlę.
+            \pause
+        \item[Hash join] Tworzy hash-table w pamięci z jednej tabeli.
+    \end{description}
+\end{frame}
+
+\begin{frame}{Wybór indeksu}
+    \begin{description}
+            \pause
+        \item[Typ indeksu]Najczęściej indeks B-tree, lub któryś z indeksów
+            przestrzennych (np. gist)
+            \pause
+        \item[Klasa operatorów]Zwykle pasuje nam domyślna klasa, ale np. dla
+            stringów wybieramy, czy chodzi nam o porównania, czy o
+            przypasowanie do wzorca.
+            \pause
+        \item[Porządkowanie]Kolejność sortowania, gdzie umieścić NULL-e,
+            \emph{collation}
+    \end{description}
+\end{frame}
+\section{PL/pgSQL}
+
+\begin{frame}{O języku}
+    \begin{itemize}
+        \pause
+        \item Proceduralne rozszerzenie deklaratywnego języka SQL
+        \pause
+        \item Składnia podobna do SQL – łatwa integracja zapytań SQL
+        \pause
+        \item Język bezpieczny
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład funkcji}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    CREATE OR REPLACE FUNCTION active_num()
+    RETURNS integer AS $$
+    DECLARE
+        total integer;
+    BEGIN
+        SELECT count(id) into total FROM people WHERE deactivate_ts > now();
+        RETURN total;
+    END;
+    $$ LANGUAGE plpgsql;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Deklaracje zmiennych}
+    \begin{minted}[fontsize=\tiny]{postgresql}
+    DECLARE
+        amount integer;
+        name character varying(128);
+        arg anyelement;
+        name users.username%TYPE;
+        result users%ROWTYPE;
+        some_record RECORD;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Konwersja typów}
+    \begin{minted}[fontsize=\tiny]{postgresql}
+    DECLARE
+        'Lorem ipsum'::character varying;
+        1::double precision;
+        'integer'::regtype;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Przypisywanie wartości do zmiennych}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    SELECT subject, content INTO note_subject, note_content
+        FROM notes WHERE id=note_id;
+    SELECT * INTO rec FROM notest WHERE id=note_id;
+    name := 'admin';
+\end{minted}
+\end{frame}
+
+\subsection{Instrukcje sterujące}
+
+\begin{frame}[fragile]{IF}
+\begin{minted}{postgresql}
+    IF VALUE > 0 THEN
+        result := 'dodatnia';
+    ELSIF VALUE == 0 THEN
+        result := 'zero';
+    ELSE
+        result := 'ujemna';
+    END IF;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{CASE}
+\begin{minted}{postgresql}
+    CASE user.type
+    WHEN 'admin', 'manager' THEN
+        PERFORM insert_value();
+    WHEN 'banned' THEN
+        RAISE EXCEPTION 'User % is banned', user;
+    ELSE
+        PERFORM insert_value_ifpossible()
+    END CASE;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{CASE}
+\begin{minted}{postgresql}
+    CASE
+        WHEN value > 0 THEN
+            result := 'dodatnia';
+        WHEN value == 0 THEN
+            result := 'zero';
+        ELSE
+            result := 'ujemna';
+    END CASE;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{CASE}
+\begin{minted}{postgresql}
+    WHILE amount > 0 LOOP
+        decrease_value(amount);
+    END LOOP;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{FOR}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    FOR i IN 1..10 LOOP
+        INSERT INTO vals(number) VALUES (i);
+    END LOOP;
+
+    FOR rec IN SELECT * FROM people LOOP
+        PERFORM handle_user(rec);
+    END LOOP;
+\end{minted}
+\end{frame}
+
+
+\begin{frame}[fragile]{Zgłaszanie komunikatów i wyjątków}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    RAISE DEBUG 'Calling the perform_operation function';
+    RAISE NOTICE 'User didn''t exist. Creating' USING TABLE='users';
+    RAISE EXCEPTION 'User is banned!'
+    RAISE division_by_zero USING MESSAGE 'Cannot use zero as number of users';
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Przechwytywanie wyjątków}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    CREATE TABLE users(
+        id serial PRIMARY KEY,
+        name character varying(128) UNIQUE,
+        age integer
+    );
+    CREATE OR REPLACE FUNCTION
+        create_or_update_user(user_name character varying, user_age integer)
+        RETURNS void AS $$
+            BEGIN
+                INSERT INTO users(name, age) VALUES (user_name, user_age);
+            EXCEPTION WHEN unique_violation THEN
+                RAISE NOTICE 'User already exists, updating';
+                UPDATE users SET age=user_age WHERE name=user_name;
+            END
+
+    $$ LANGUAGE plpgsql;
+\end{minted}
+\end{frame}
+
+\subsection{Komunikacja z bazą danych}
+
+\begin{frame}[fragile]{Dynamiczne wywoływanie}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    EXECUTE format(
+        'SELECT subject, content FROM %I WHERE id=$1;'
+        tabname
+    )
+    INTO article_subject, article_content
+    USING article_id
+    ;
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Wyzwalacze}
+\begin{minted}[fontsize=\tiny]{postgresql}
+    CREATE TABLE posts(
+        id serial PRIMARY KEY,        
+        content text,
+        protected boolean
+    );
+
+	CREATE OR REPLACE FUNCTION before_delete_post() RETURNS trigger AS $$
+	BEGIN
+		IF OLD.protected THEN
+			RAISE NOTICE 'Post is protected from deletion';
+			RETURN NULL;
+		ELSE
+			RETURN OLD;
+		END IF;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TRIGGER tbeforedelete
+		BEFORE DELETE ON posts FOR EACH ROW
+		EXECUTE PROCEDURE before_delete_post();
+\end{minted}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,166 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{minted}
+\title{Wprowadzenie do SQL – samouczek}
+\author{Szymon Pyżalski}
+\date{10 grudnia 2018}
+
+
+\begin{document}
+\maketitle
+\section{Utworzenie użytkownika i bazy na ćwiczenia}
+
+\subsection{Połączenie do serwera jako admin}
+\begin{enumerate}
+    \item Uruchom program pgAdmin4
+    \item Kliknij PPM Serwery $\rightarrow$ Utwórz $\rightarrow$ Serwer
+    \item Nadaj dowolną nazwę serwerowi (np. localhost-admin)
+    \item Podaj jako host: localhost, użytkownik: postgres, hasło: postgres
+    \item Rozwiń drzewo serwera. Jeśli się udało, masz połączenie
+\end{enumerate}
+\subsection{Utworzenie użytkownika}
+
+\begin{enumerate}
+    \item Kliknij PPM „Role Loginów/Grup $\rightarrow$ Utwórz rola loginu/grupy
+    \item W polu „nazwa” podaj swój login
+    \item W zakładce „definicja” podaj swoje hasło
+    \item W zakładce „uprawnienia” zaznaczy tylko „czy logować się”
+    \item Kliknij „zapisz”
+\end{enumerate}
+
+\subsection{Utworzenie bazy i połączenie}
+\begin{enumerate}
+    \item Kliknij PPM Bazy danych $\rightarrow$ Utwórz $\rightarrow$ Baza danych
+    \item Wpisz dowolną nazwę dla nowej bazy, a jako właściciela ustaw
+        użytkownika
+    \item Zapisz bazę
+    \item Utwórz serwer (np. o nazwie localhost-uczestnik), w którym zamiast
+        jako użytkownik „postgres” będziesz logować się nowym użytkownikiem, a
+        jako bazę użyjesz nowej bazy.
+    \item Sprawdź, czy możesz się połączyć do nowego serwera.
+\end{enumerate}
+
+\section{Utworzenie tabeli}
+
+\subsection{Utworzenie tabeli przy pomocy GUI}
+\begin{enumerate}
+    \item Rozwiń Bazy danych $\rightarrow$ Twoja baza $\rightarrow$ Schematy $\rightarrow$ Public
+    \item Kliknij PPM Utwórz $\rightarrow$ Tabela
+    \item Na pierwszej zakładce podaj nazwę tabeli
+    \item Na drugiej zakładce utwórz kolumnę z nazwą: id, typem: serial,
+        oraz nie null i kluczem głównym.
+    \item Przy pomocy przycisku + dodaj pozostałe kolumny
+    \item Zapisz
+\end{enumerate}
+
+\subsection{Utworzenie tabeli przy pomocy SQL}
+\begin{enumerate}
+    \item Kliknij Narzędzia $\rightarrow$ Narzędzie zapytania
+    \item Wpisz kod SQL utworzenia bazy. Np.
+        \begin{minted}{postgresql}
+CREATE TABLE osoby(
+    id serial PRIMARY KEY,
+    imie_nazwisko character varying NOT NULL,
+    wiek integer,
+);
+        \end{minted}
+    \item Kliknij ikonę błyskawicy nad polem do wprowadzanie SQL
+    \item Kliknij PPM Tabele $\rightarrow$ Odśwież. Nowa tabela powinna być widoczna
+    \item Kliknij PPM nową tabelę $\rightarrow$ skrypty $\rightarrow$ skrypt CREATE. Porównaj
+        wygenerowany skrypt z Twoim skryptem.
+\end{enumerate}
+
+\subsection{Wprowadzenie danych przy pomocy GUI}
+\begin{enumerate}
+    \item Kliknij PPM Twoją tabelę $\rightarrow$ Przeglądaj/edytuj wiersze $\rightarrow$ wszystkie
+        wiersze
+    \item Wpisz do tabeli kilku bohaterów swojej ulubionej książki
+    \item Kliknij na ikonkę dyskietki
+\end{enumerate}
+
+\subsection{Wprowadzenie danych przy pomocy SQL}
+Użyj polecenia \texttt{INSERT}. Np.
+
+    \begin{minted}{postgresql}
+INSERT INTO osoby (imie_nazwisko, wiek) VALUES
+    ('Shaddam Corrino', 57),
+    ('Paul Atreides', 15);
+    \end{minted}
+
+\subsection{Wprowadzenie danych przy pomocy CSV}
+\begin{enumerate}
+    \item Wejdź na stronę https://mockaroo.com/
+    \item Utwórzy tyle kolumn i o takich nazwach jak w tabeli (pomijając id)
+    \item Wygeneruj plik CSV i zapisz go na dysku
+    \item Kliknij twoją tabelę $\rightarrow$ Import/Export…
+    \item Wybierz „Import”, podaj nazwę swojej tabeli, zaznacz „nagłówek” oraz
+        wybierz przecinek jak separator
+    \item Na zakładce „Kolumny” usuń kolumnę id
+    \item Rozpocznik import
+    \item Upewnij się, że Twoje dane się pojawiły
+\end{enumerate}
+
+\section{Manipulacje danymi}
+
+\subsection{Filtrowanie danych}
+    \begin{minted}{postgresql}
+SELECT imie_nazwisko, wiek FROM osoby
+    WHERE wiek > 50;
+    \end{minted}
+
+\subsection{Usuwanie danych}
+    \begin{minted}{postgresql}
+DELETE FROM osoby WHERE wiek > 50;
+    \end{minted}
+
+\subsection{Edycja danych}
+    \begin{minted}{postgresql}
+UPDATE osoby SET imie_nazwisko='Muad''Dib'
+    WHERE imie_nazwisko='Paul Atreides';
+    \end{minted}
+
+\section{Utworzenie klucza obcego}
+\subsection{Utworzenie klucza obcego w GUI}
+\begin{enumerate}
+    \item Wybierz zakładkę „ograniczenia” w oknie tabeli
+    \item Wybierz podzakładkę „klucz obcy”
+    \item Kliknij znak plus, pojawi się nowy rząd w tabeli
+    \item Kliknij znak edycji przy nowym rzędzie
+    \item Wybierz zakładkę „kolumny”
+    \item Wskaż lokalną kolumnę, obcą tabelę i obcą kolumnę
+    \item Kliknij znak plus przy formularzu
+\end{enumerate}
+
+\subsection{Utworzenie klucza obcego przez SQL}
+
+Klucz można utworzyć w czasie tworzenia tabeli, dodając do definicji kolumny
+klauzulę \texttt{REFERENCES tabela} (jeśli klucz ma prowadzić do klucza
+głównego lub \texttt{REFERENCES tabela(kolumna)}).
+
+Aby dodać klucz do istniejącej tabeli wykonujemy:
+
+\begin{minted}{postgresql}
+    ALTER TABLE tabela ADD FOREIGN KEY (kolumna) REFERENCES tabela(kolumna);
+\end{minted}
+
+\section{Analiza zapytania}
+
+\begin{enumerate}
+    \item Uruchom „narzędzie zapytania”
+    \item Wpisz zapytanie w pole
+    \item Przejdź na zakładkę „plan zapytania”
+    \item Naciśnij F7 albo wybierz „EXPLAIN” z menu obok ikony błyskawicy
+    \item Wyświetli się graficzny plan zapytania
+\end{enumerate}
+
+\section{Utworzenie indeksu}
+
+\begin{enumerate}
+    \item Rozwiń drzewo tabeli
+    \item Kliknij PPM na Indeksy $\rightarrow$ Utwórz $\rightarrow$ Indeks
+    \item Wybierz nazwę dla indeksu
+    \item Na zakładce „definicja” dodaj odpowiednie kolumny
+\end{enumerate}
+
+\end{document}

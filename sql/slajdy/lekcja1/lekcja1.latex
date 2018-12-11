@@ -138,7 +138,7 @@ SELECT first_name, last_name FROM people
     \begin{minted}{postgresql}
         CREATE TABLE osoby(
             id serial PRIMARY KEY,
-            imie_nazwisko character varying,
+            imie_nazwisko character varying(128),
             wiek integer,
             zarejestrowany timestamp
         );
@@ -168,7 +168,7 @@ DELETE FROM osoby WHERE wiek > 50;
     \end{minted}
 \end{frame}
 
-\begin{frame}[fragile]{Usuwanie danych z tabeli}
+\begin{frame}[fragile]{Edycja danych}
     \begin{minted}{postgresql}
 UPDATE osoby SET imie_nazwisko='Muad''Dib'
     WHERE imie_nazwisko='Paul Atreides';
